@@ -3,6 +3,10 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
+// Kết nối MongoDB
+const connectDB = require("./configs/configDB");
+connectDB(); // Kết nối MongoDB
+
 const app = express();
 
 // Middleware
@@ -18,7 +22,7 @@ app.use("/", indexRoutes);
 require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "development"}`,
 });
-console.log("port: ", process.env.NODE_ENV);
+console.log("Environment: ", process.env.NODE_ENV);
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
