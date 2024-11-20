@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
-const indexRoutes = require("./routes/index");
+const indexRoutes = require("./routes/user");
 app.use("/", indexRoutes);
 
 // Server
