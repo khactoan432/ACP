@@ -15,8 +15,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
-const indexRoutes = require("./routes/user");
-app.use("/", indexRoutes);
+const apiRoutes = require("./routes");
+app.use("/api", apiRoutes);
 
 // Server
 require("dotenv").config({
