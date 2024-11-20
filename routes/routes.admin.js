@@ -12,11 +12,6 @@ router.post("/achievement", adminController.createAchievement);
 router.put("/achievement/:id", adminController.putAchievement);
 router.delete("/achievement/:id", adminController.deleteAchievement);
 
-router.get("/teacher", adminController.getTeacher);
-router.post("/teacher", adminController.createTeacher);
-router.put("/teacher/:id", adminController.putTeacher);
-router.delete("/teacher/:id", adminController.deleteTeacher);
-
 router.get("/user", adminController.getUser);
 router.post("/user", adminController.createUser);
 router.put("/user/:id", adminController.putUser);
@@ -51,6 +46,16 @@ router.get("/exam", adminController.getExam);
 router.post("/exam", adminController.createExam);
 router.put("/exam/:id", adminController.putExam);
 router.delete("/exam/:id", adminController.deleteExam);
+
+router.get("/overview", adminController.getOverview);
+router.post("/overview", adminController.createOverview);
+router.put("/overview/:id", adminController.putOverview);
+router.delete("/overview/:id", adminController.deleteOverview);
+
+router.get("/describe", adminController.getDescribe);
+router.post("/describe", adminController.createDescribe);
+router.put("/describe/:id", adminController.putDescribe);
+router.delete("/describe/:id", adminController.deleteDescribe);
 
 router.get("/order", adminController.getOrder);
 router.post("/order", adminController.createOrder);

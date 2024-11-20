@@ -1,11 +1,15 @@
 const mongoose = require("mongoose");
 
 // Định nghĩa schema
-const userSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
     trim: true,
+  },
+  image: {
+    type: String,
+    required: true,
   },
   email: {
     type: String,
@@ -17,6 +21,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  phone_number: {
+    type: String,
+    required: true,
+  },
+  codeforce_name: {
+    type: String,
+    required: true,
+  },
+  role: {
+    type: String,
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -24,6 +40,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Tạo model
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", UserSchema);
 
 module.exports = User;
