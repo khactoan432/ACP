@@ -1,14 +1,27 @@
-const { User, Banner, Achievement, Comment, Rate, Course, Topic, Lesson, Exam, Order } = require("../models");
+const {
+  User,
+  Banner,
+  Achievement,
+  Comment,
+  Rate,
+  Course,
+  Topic,
+  Lesson,
+  Exam,
+  Order,
+} = require("../models");
 
 exports.getBanners = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const banners = 
-      await Banner.find()
-        .sort({ createdAt: 1 }) 
-        .skip(skip) 
-        .limit(limit);
+    console.log("skip: ", skip);
+    console.log("limit: ", limit);
+
+    const banners = await Banner.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(banners);
   } catch (err) {
     console.error("Error fetching paginated banners:", error);
@@ -35,14 +48,16 @@ exports.createBanner = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating banner:", error);
-    res.status(500).json({ error: "An error occurred while creating the banner." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the banner." });
   }
 };
 
 exports.updateBanner = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Banner by ID and update
     const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, {
@@ -62,7 +77,7 @@ exports.updateBanner = async (req, res) => {
 
 exports.deleteBanner = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Banner by ID and delete
     const deletedBanner = await Banner.findByIdAndDelete(id);
@@ -81,11 +96,10 @@ exports.getAchievements = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const achievements = 
-      await Achievement.find()
-        .sort({ createdAt: 1 }) 
-        .skip(skip) 
-        .limit(limit);
+    const achievements = await Achievement.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(achievements);
   } catch (err) {
     console.error("Error fetching paginated achievements:", error);
@@ -113,10 +127,14 @@ exports.updateAchievement = async (req, res) => {
       return res.status(400).json({ error: "No data provided for update." });
     }
 
-    const updatedAchievement = await Achievement.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedAchievement = await Achievement.findByIdAndUpdate(
+      id,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!updatedAchievement) {
       return res.status(404).json({ error: "Achievement not found." });
@@ -131,13 +149,15 @@ exports.updateAchievement = async (req, res) => {
       return res.status(400).json({ error: "Invalid achievement ID." });
     }
 
-    res.status(500).json({ error: "An error occurred while updating the achievement." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the achievement." });
   }
 };
 
 exports.deleteAchievement = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Achievement by ID and delete
     const deletedAchievement = await Achievement.findByIdAndDelete(id);
@@ -156,11 +176,10 @@ exports.getUsers = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const users = 
-      await User.find()
-        .sort({ createdAt: 1 }) 
-        .skip(skip) 
-        .limit(limit);
+    const users = await User.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(users);
   } catch (err) {
     console.error("Error fetching paginated users:", error);
@@ -170,17 +189,17 @@ exports.getUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const {
-      name,
-      image,
-      email,
-      password,
-      phone_number,
-      codeforce_name,
-      role,
-    } = req.body;
+    const { name, image, email, password, phone_number, codeforce_name, role } =
+      req.body;
 
-    if (!name || !email || !password || !phone_number || !codeforce_name || !role) {
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !phone_number ||
+      !codeforce_name ||
+      !role
+    ) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -205,7 +224,9 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: "Email is already registered." });
     }
 
-    res.status(500).json({ error: "An error occurred while creating the user." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the user." });
   }
 };
 
@@ -238,13 +259,15 @@ exports.updateUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid user ID." });
     }
 
-    res.status(500).json({ error: "An error occurred while updating the user." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the user." });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find User by ID and delete
     const deletedUser = await User.findByIdAndDelete(id);
@@ -263,11 +286,10 @@ exports.getCourses = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const courses = 
-      await Course.find()
-        .sort({ createdAt: 1 }) 
-        .skip(skip) 
-        .limit(limit);
+    const courses = await Course.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(courses);
   } catch (err) {
     console.error("Error fetching paginated users:", error);
@@ -283,7 +305,13 @@ exports.createCourse = async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newCourse = await Course.create({ id_user, name, image, price, discount });
+    const newCourse = await Course.create({
+      id_user,
+      name,
+      image,
+      price,
+      discount,
+    });
 
     res.status(201).json({
       message: "Course created successfully.",
@@ -293,10 +321,14 @@ exports.createCourse = async (req, res) => {
     console.error("Error creating course:", error);
 
     if (error.code === 11000 && error.keyValue.id_user) {
-      return res.status(400).json({ error: "Course with this user already exists." });
+      return res
+        .status(400)
+        .json({ error: "Course with this user already exists." });
     }
 
-    res.status(500).json({ error: "An error occurred while creating the course." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the course." });
   }
 };
 
@@ -327,13 +359,15 @@ exports.updateCourse = async (req, res) => {
       return res.status(400).json({ error: "Invalid course ID." });
     }
 
-    res.status(500).json({ error: "An error occurred while updating the course." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the course." });
   }
 };
 
 exports.deleteCourse = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Course by ID and delete
     const deletedCourse = await Course.findByIdAndDelete(id);
@@ -370,8 +404,8 @@ exports.createTopic = async (req, res) => {
 
 exports.updateTopic = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Topic by ID and update
     const updatedTopic = await Topic.findByIdAndUpdate(id, updateData, {
@@ -391,7 +425,7 @@ exports.updateTopic = async (req, res) => {
 
 exports.deleteTopic = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Topic by ID and delete
     const deletedTopic = await Topic.findByIdAndDelete(id);
@@ -428,8 +462,8 @@ exports.createLesson = async (req, res) => {
 
 exports.updateLesson = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Lesson by ID and update
     const updatedLesson = await Lesson.findByIdAndUpdate(id, updateData, {
@@ -449,7 +483,7 @@ exports.updateLesson = async (req, res) => {
 
 exports.deleteLesson = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Lesson by ID and delete
     const deletedLesson = await Lesson.findByIdAndDelete(id);
@@ -486,8 +520,8 @@ exports.createExam = async (req, res) => {
 
 exports.updateExam = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Exam by ID and update
     const updatedExam = await Exam.findByIdAndUpdate(id, updateData, {
@@ -507,7 +541,7 @@ exports.updateExam = async (req, res) => {
 
 exports.deleteExam = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Exam by ID and delete
     const deletedExam = await Exam.findByIdAndDelete(id);
@@ -544,8 +578,8 @@ exports.createOverview = async (req, res) => {
 
 exports.updateOverview = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Overview by ID and update
     const updatedOverview = await Overview.findByIdAndUpdate(id, updateData, {
@@ -565,7 +599,7 @@ exports.updateOverview = async (req, res) => {
 
 exports.deleteOverview = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Overview by ID and delete
     const deletedOverview = await Overview.findByIdAndDelete(id);
@@ -602,8 +636,8 @@ exports.createDescribe = async (req, res) => {
 
 exports.updateDescribe = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Describe by ID and update
     const updatedDescribe = await Describe.findByIdAndUpdate(id, updateData, {
@@ -623,7 +657,7 @@ exports.updateDescribe = async (req, res) => {
 
 exports.deleteDescribe = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Describe by ID and delete
     const deletedDescribe = await Describe.findByIdAndDelete(id);
@@ -660,8 +694,8 @@ exports.createOrder = async (req, res) => {
 
 exports.updateOrder = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Order by ID and update
     const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
@@ -681,7 +715,7 @@ exports.updateOrder = async (req, res) => {
 
 exports.deleteOrder = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Order by ID and delete
     const deletedOrder = await Order.findByIdAndDelete(id);
@@ -759,8 +793,8 @@ exports.createStudent = async (req, res) => {
 
 exports.updateStudent = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     const updatedStudent = await Register.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
@@ -779,7 +813,7 @@ exports.updateStudent = async (req, res) => {
 
 exports.deleteStudent = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Student by ID and delete
     const deletedStudent = await Register.findByIdAndDelete(id);
@@ -807,8 +841,8 @@ exports.createComment = async (req, res) => {
 
 exports.updateComment = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     const updatedComment = await Comment.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
@@ -827,7 +861,7 @@ exports.updateComment = async (req, res) => {
 
 exports.deleteComment = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Comment by ID and delete
     const deletedComment = await Comment.findByIdAndDelete(id);
@@ -855,8 +889,8 @@ exports.createRate = async (req, res) => {
 
 exports.updateRate = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     const updatedRate = await Rate.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
@@ -875,7 +909,7 @@ exports.updateRate = async (req, res) => {
 
 exports.deleteRate = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Rate by ID and delete
     const deletedRate = await Rate.findByIdAndDelete(id);
