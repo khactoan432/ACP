@@ -4,6 +4,9 @@ const session = require("express-session");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
+const errorMiddleware = require("./middlewares/errorMiddleware");
+const loggerMiddleware = require("./middlewares/loggerMiddleware");
+
 // Kết nối MongoDB
 const connectDB = require("./configs/configDB");
 connectDB(); // Kết nối MongoDB
@@ -28,9 +31,11 @@ app.use(
 );
 
 // Routes
+app.use(loggerMiddleware);
 const apiRoutes = require("./routes");
 app.use("/api", apiRoutes);
 
+app.use(errorMiddleware);
 // Server
 require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "development"}`,

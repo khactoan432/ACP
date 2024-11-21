@@ -1,7 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/controllers.admin");
-// const authenticate = require("../middleware/authMiddleware");
+const {
+  authenticateToken,
+  authorizeRole,
+} = require("../middlewares/authMiddleware");
+
+router.use(authenticateToken);
+router.use(authorizeRole(["ADMIN"]));
 
 router.get("/banners", adminController.getBanners);
 router.post("/banner", adminController.createBanner);

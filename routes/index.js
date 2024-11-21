@@ -6,6 +6,7 @@ const userRoutes = require("./routes.user");
 const teacherRoutes = require("./routes.teacher");
 const adminRoutes = require("./routes.admin");
 const indexController = require("../controllers/index");
+const authRoutes = require("./routes.auth");
 
 // Định nghĩa các nhóm API
 router.use("/users", userRoutes);
