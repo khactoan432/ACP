@@ -6,11 +6,13 @@ const router = express.Router();
 // const teacherRoutes = require("./routes.teacher");
 // const adminRoutes = require("./routes.admin");
 const indexController = require("../controllers/index");
+const authRoutes = require("./routes.auth");
 
 // Định nghĩa các nhóm API
 // router.use("/users", userRoutes);
 // router.use("/teachers", teacherRoutes);
 // router.use("/admin", adminRoutes);
+router.use("/auth", authRoutes);
 
 router.get("/comments", indexController.getComments);
 router.get("/rates", indexController.getRates);

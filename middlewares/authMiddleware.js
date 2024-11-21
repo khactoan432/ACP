@@ -1,9 +1,9 @@
 // authMiddleware.js
 const jwt = require("jsonwebtoken");
 
-function authenticate(req, res, next) {
+const authenticateToken = (req, res, next) => {
   const token = req.header("Authorization");
-
+  console.log("Authenticating: ", token);
   if (!token) {
     return res
       .status(401)
@@ -12,11 +12,26 @@ function authenticate(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach user data to the request
-    next(); // Proceed to the next middleware or route handler
+    req.user = decoded;
+    next();
   } catch (err) {
     res.status(400).json({ message: "Invalid token." });
   }
-}
+};
 
-module.exports = authenticate;
+const authorizeRole = (allowedRoles) => (req, res, next) => {
+  const token = req.header("Authorization");
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  console.log("decoded token: ", decoded.role);
+  if (!allowedRoles.includes(decoded.role)) {
+    return res
+      .status(403)
+      .json({ error: "Bạn không có quyền truy cập API này." });
+  }
+  next();
+};
+
+module.exports = {
+  authenticateToken: authenticateToken,
+  authorizeRole: authorizeRole,
+};

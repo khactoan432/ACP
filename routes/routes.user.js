@@ -1,6 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/controllers.user");
+const {
+  authenticateToken,
+  authorizeRole,
+} = require("../middlewares/authMiddleware");
+
+router.use(authenticateToken);
+router.use(authorizeRole(["USER", "ADMIN", "TEACHER"]));
 
 router.get("/courses", userController.getCourse);
 router.get("/exams", userController.getExam);

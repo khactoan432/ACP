@@ -1,72 +1,136 @@
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { User } = require("../models");
 const { validNameCodeforce, validUser } = require("../helpers/validations");
 
-const registerController = async (req, res) => {
-  try {
-    const {
-      name,
-      image,
-      email,
-      password,
-      repasswork,
-      phone_number,
-      codeforce_name,
-      role,
-    } = req.body;
+class AuthController {
+  async registerController(req, res) {
+    try {
+      const {
+        name,
+        image,
+        email,
+        password,
+        repassword,
+        phone_number,
+        codeforce_name,
+        role,
+      } = req.body;
 
-    if (!validNameCodeforce(name)) {
-      return res
-        .status(400)
-        .json({ error: "Tên codeforce của bạn không tồn tại." });
-    }
-    if (!validUser(email)) {
-      return res.status(400).json({ error: "Email đã tồn tại." });
-    }
-    if (password !== repasswork) {
-      return res.status(400).json({ error: "Mật khẩu không trùng khớp." });
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      name,
-      image,
-      email,
-      password: hashedPassword,
-      phone_number,
-      codeforce_name,
-      role,
-    });
-    await newUser.save();
+      // Validation
+      try {
+        const validationNameCodeforce = await validNameCodeforce(
+          codeforce_name
+        );
+        if (!validationNameCodeforce) {
+          return res
+            .status(400)
+            .json({ error: "Tên codeforce của bạn không tồn tại." });
+        }
+      } catch (error) {
+        return res.status(500).json({ error: "Lỗi khi kiểm tra email." });
+      }
 
-    console.log(newUser.email);
-    res.status(201).json({
-      message: "Đăng ký thành công",
-      data: `Email: ${newUser.email}`,
-    });
-  } catch (error) {
-    res.status(400).json({
-      error: error.message,
-    });
+      const validationUser = await validUser(email);
+      if (validationUser) {
+        return res.status(400).json({ error: "Email đã tồn tại." });
+      }
+      if (password !== repassword) {
+        return res.status(400).json({ error: "Mật khẩu không trùng khớp." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = new User({
+        name,
+        image,
+        email,
+        password: hashedPassword,
+        phone_number,
+        codeforce_name,
+        role,
+      });
+      await newUser.save();
+
+      res.status(201).json({
+        message: "Đăng ký thành công",
+        data: `Email: ${newUser.email}`,
+      });
+    } catch (error) {
+      res.status(400).json({
+        error: error.message,
+      });
+    }
   }
-};
-const loginController = (req, res) => {
-  // const { username, password } = req.body;
-  // // query table users, get username, password
-  // const userName = ;
-  // const password = '';
-  // if (username === 'admin' && password === 'password') {
-  //     // Lưu thông tin người dùng vào session
-  //     req.session.user = {
-  //         id: 1,
-  //         username: 'admin',
-  //         role: 'admin',
-  //     };
-  //     return res.json({ message: 'Đăng nhập thành công!' });
-  // }
-  // res.status(401).json({ message: 'Sai tên đăng nhập hoặc mật khẩu.' });
-};
-const logoutController = () => {};
 
-module.exports = {
-  registerController: registerController,
-};
+  //
+  async loginController(req, res) {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ error: "Email và mật khẩu là bắt buộc." });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res
+          .status(401)
+          .json({ error: "Email hoặc mật khẩu không đúng." });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      console.log("match: ", isMatch);
+      if (!isMatch) {
+        return res
+          .status(401)
+          .json({ error: "Email hoặc mật khẩu không đúng." });
+      }
+
+      // JWT token
+      const token = jwt.sign(
+        { email: user.email, role: user.role },
+        process.env.JWT_SECRET || "default_secret",
+        { expiresIn: "1d" }
+      );
+
+      return res.status(200).json({
+        message: "Đăng nhập thành công",
+        user: {
+          name: user.name,
+          image: user.image,
+          email: user.email,
+          phone_number: user.phone_number,
+          codeforce_name: user.codeforce_name,
+          role: user.role,
+        },
+        token,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ error: "Đã xảy ra lỗi trong quá trình xử lý." });
+    }
+  }
+
+  logoutController(req, res) {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Lỗi khi xóa session:", err);
+          return res.status(500).json({ error: "Không thể logout." });
+        }
+        res.clearCookie("connect.sid");
+        return res.status(200).json({ message: "Đăng xuất thành công." });
+      });
+    } catch (error) {
+      console.error("Lỗi logout:", error);
+      return res.status(500).json({ error: "Đã xảy ra lỗi khi logout." });
+    }
+  }
+}
+
+module.exports = new AuthController();

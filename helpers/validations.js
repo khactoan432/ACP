@@ -1,15 +1,22 @@
-async function validUser(email) {
-  const isExist = await User.findOne({ email: email });
-  if (!isExist) {
-    return true;
-  }
-  return false;
-}
+const { User } = require("../models/");
 
-async function validNameCodeforce(name) {
+const validUser = async (email) => {
+  try {
+    const isExist = await User.findOne({ email: email });
+    return isExist ? true : false;
+  } catch (error) {
+    console.log("error: ", error);
+  }
+};
+
+const validNameCodeforce = async (name) => {
   // TODO:
-  return true;
-}
+  try {
+    return true;
+  } catch (error) {
+    console.log("error: ", error);
+  }
+};
 
 module.exports = {
   validUser: validUser,
