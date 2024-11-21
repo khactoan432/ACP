@@ -261,9 +261,16 @@ exports.deleteUser = async (req, res) => {
 
 exports.getCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const courses = 
+      await Course.find()
+        .sort({ createdAt: 1 }) 
+        .skip(skip) 
+        .limit(limit);
     res.status(200).json(courses);
   } catch (err) {
+    console.error("Error fetching paginated users:", error);
     res.status(500).json({ error: err.message });
   }
 };
@@ -271,32 +278,56 @@ exports.getCourses = async (req, res) => {
 exports.createCourse = async (req, res) => {
   try {
     const { id_user, name, image, price, discount } = req.body;
-    const newCourse = new Course({ id_user, name, image, price, discount });
-    await newCourse.save();
-    res.status(201).json(newCourse);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    if (!id_user || !name || !image || !price || !discount) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newCourse = await Course.create({ id_user, name, image, price, discount });
+
+    res.status(201).json({
+      message: "Course created successfully.",
+      data: newCourse,
+    });
+  } catch (error) {
+    console.error("Error creating course:", error);
+
+    if (error.code === 11000 && error.keyValue.id_user) {
+      return res.status(400).json({ error: "Course with this user already exists." });
+    }
+
+    res.status(500).json({ error: "An error occurred while creating the course." });
   }
 };
 
 exports.updateCourse = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
-    // Find Course by ID and update
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided for update." });
+    }
+
     const updatedCourse = await Course.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedCourse) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ error: "Course not found." });
     }
 
-    res.status(200).json(updatedCourse);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Course updated successfully.",
+      data: updatedCourse,
+    });
+  } catch (error) {
+    if (error.kind === "ObjectId") {
+      return res.status(400).json({ error: "Invalid course ID." });
+    }
+
+    res.status(500).json({ error: "An error occurred while updating the course." });
   }
 };
 

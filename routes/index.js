@@ -12,6 +12,7 @@ const authRoutes = require("./routes.auth");
 router.use("/users", userRoutes);
 router.use("/teachers", teacherRoutes);
 router.use("/admin", adminRoutes);
+router.use("/auth", authRoutes);
 
 router.get("/comments", indexController.getComments);
 router.get("/rates", indexController.getRates);
