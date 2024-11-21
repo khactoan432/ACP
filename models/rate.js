@@ -2,8 +2,21 @@ const mongoose = require("mongoose");
 
 // Định nghĩa schema
 const RateSchema = new mongoose.Schema({
+  id_user: {
+    type: Number,
+    required: true,
+  },
+  id_rated: {
+    type: Number,
+    required: true,
+  },
+  type: {
+    type: String,
+    enum: ["COURSE", "EXAM"],
+    required: true,
+  },
   rate: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   content: {

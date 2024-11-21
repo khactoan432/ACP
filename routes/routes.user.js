@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const userController = require("../controllers/user.controllers");
+const userController = require("../controllers/controllers.user");
 
 router.get("/courses", userController.getCourse);
 router.get("/exams", userController.getExam);
@@ -12,15 +12,15 @@ router.get("/order-exam", userController.getOrderExam);
 router.post("/order-exam", userController.createOrderExam);
 
 router.post("/comments", userController.createComment);
-router.put("/comment", userController.updateComment);
-router.delete("/comment", userController.deleteComment);
+router.put("/comment/:id", userController.updateComment);
+router.delete("/comment/:id", userController.deleteComment);
 
 router.post("/rates", userController.createRate);
-router.put("/rate", userController.updateRate);
-router.delete("/rate", userController.deleteRate);
+router.put("/rate/:id", userController.updateRate);
+router.delete("/rate/:id", userController.deleteRate);
 
 router.get("/infors", userController.getInfor);
-router.put("/infor", userController.updateInfor);
+router.put("/infor/:id", userController.updateInfor);
 
 router.get("/rank", userController.getRank);
 router.get("/score", userController.getScore);

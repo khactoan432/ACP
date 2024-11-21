@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const ExamSchema = new mongoose.Schema({
   id_user: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   name: {

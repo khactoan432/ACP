@@ -3,12 +3,12 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const DescribeSchema = new mongoose.Schema({
   id_material: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   type: {
     type: String,
-    enum: ["COURSE", "EXAM"],
+    enum: ["COURSE", "EXAM","OVERVIEW"],
     required: true,
   },
   desc: {

@@ -3,11 +3,11 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const RegisterSchema = new mongoose.Schema({
   id_user: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   id_material: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   type: {

@@ -1,17 +1,73 @@
-const getComments = () => {};
+const { Comment, Rate, Banner, Achievement, Course, Topic, Lesson, Exam } = require("../models");
 
-const getRates = () => {};
+exports.getComments = async (req, res) => {
+  try {
+    const comments = await Comment.find();
+    res.status(200).json(comments);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getBanners = () => {};
+exports.getRates = async (req, res) => {
+  try {
+    const rates = await Rate.find();
+    res.status(200).json(rates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getAchievements = () => {};
+exports.getBanners = async (req, res) => {
+  try {
+    const banners = await Banner.find();
+    res.status(200).json(rates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getCourses = () => {};
+exports.getAchievements = async (req, res) => {
+  try {
+    const achievements = await Achievement.find();
+    res.status(200).json(achievements);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getTopics = () => {};
+exports.getCourses = async (req, res) => {
+  try {
+    const courses = await Course.find();
+    res.status(200).json(courses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getLessons = () => {};
-// video và exam mọi người đều lấy được nhưngg ở trạng thái khoá
-const getVideos = () => {};
+exports.getTopics = async (req, res) => {
+  try {
+    const topics = await Topic.find();
+    res.status(200).json(topics);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const getExams = () => {};
+exports.getLessons = async (req, res) => {
+  try {
+    const lessons = await Lesson.find();
+    res.status(200).json(lessons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getExams = async (req, res) => {
+  try {
+    const exams = await Exam.find();
+    res.status(200).json(exams);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

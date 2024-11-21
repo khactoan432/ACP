@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const CourseSchema = new mongoose.Schema({
   id_user: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   name: {
@@ -16,11 +16,11 @@ const CourseSchema = new mongoose.Schema({
     required: true,
   },
   price: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   discount: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   createdAt: {

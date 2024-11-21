@@ -3,11 +3,11 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const OrderSchema = new mongoose.Schema({
   id_user: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   id_material: {
-    type: Integer,
+    type: Number,
     required: true,
   },
   type: {
@@ -17,7 +17,7 @@ const OrderSchema = new mongoose.Schema({
   },
   payment_status: {
     type: String,
-    required: true,
+    default: "pending",
   },
   createdAt: {
     type: Date,

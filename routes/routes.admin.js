@@ -1,11 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const adminController = require("../controllers/admin.controllers");
+const adminController = require("../controllers/controllers.admin");
 const authenticate = require("../middleware/authMiddleware");
 
 router.get("/banners", adminController.getBanner);
-//example authorization middleware
-router.post("/banner", authenticate, adminController.createBanner);
+router.post("/banner", adminController.createBanner);
 router.put("/banner/:id", adminController.createBanner);
 router.delete("/banner/:id", adminController.deleteBanner);
 
