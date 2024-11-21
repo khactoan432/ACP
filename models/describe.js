@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const DescribeSchema = new mongoose.Schema({
   id_material: {
-    type: Number,
+    type: String,
     required: true,
   },
   type: {

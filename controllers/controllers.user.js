@@ -27,7 +27,7 @@ exports.getOrderCourse = async (req, res) => {
   }
 };
 
-exports.postOrderCourse = async (req, res) => {
+exports.createOrderCourse = async (req, res) => {
   try {
     const { id_user, id_material, type } = req.body;
     const newOrder = new Order({ id_user, id_material, type});
@@ -47,7 +47,7 @@ exports.getOrderExam = async (req, res) => {
   }
 };
 
-exports.postOrderExam = async (req, res) => {
+exports.createOrderExam = async (req, res) => {
   try {
     const { id_user, id_material, type } = req.body;
     const newOrder = new Order({ id_user, id_material, type});
@@ -58,7 +58,7 @@ exports.postOrderExam = async (req, res) => {
   }
 };
 
-exports.postComment = async (req, res) => {
+exports.createComment = async (req, res) => {
   try {
     const { id_user, id_commented, type, content } = req.body;
     const newComment = new Comment({ id_user, id_commented, type, content });
@@ -107,7 +107,7 @@ exports.deleteComment = async (req, res) => {
   }
 };
 
-exports.postRate = async (req, res) => {
+exports.createRate = async (req, res) => {
   try {
     const { id_user, id_rated, type, content } = req.body;
     const newRate = new Rate({ id_user, id_rated, type, content });

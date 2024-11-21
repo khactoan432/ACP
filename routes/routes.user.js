@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/controllers.user");
 
-router.get("/courses", userController.getCourse);
-router.get("/exams", userController.getExam);
+router.get("/courses", userController.getCourses);
+router.get("/exams", userController.getExams);
 
 router.get("/order-course", userController.getOrderCourse);
 router.post("/order-course", userController.createOrderCourse);
@@ -15,11 +15,11 @@ router.post("/comments", userController.createComment);
 router.put("/comment/:id", userController.updateComment);
 router.delete("/comment/:id", userController.deleteComment);
 
-router.post("/rates", userController.createRate);
+router.post("/rate", userController.createRate);
 router.put("/rate/:id", userController.updateRate);
 router.delete("/rate/:id", userController.deleteRate);
 
-router.get("/infors", userController.getInfor);
+router.get("/infor", userController.getInfor);
 router.put("/infor/:id", userController.updateInfor);
 
 router.get("/rank", userController.getRank);

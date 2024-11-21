@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const OverviewSchema = new mongoose.Schema({
   id_material: {
-    type: Number,
+    type: String,
     required: true,
   },
   type: {
@@ -20,10 +20,6 @@ const OverviewSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-  },
-  type: {
-    type: String,
-    required: true,
   },
   createdAt: {
     type: Date,

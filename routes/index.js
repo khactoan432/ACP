@@ -2,15 +2,15 @@ const express = require("express");
 const router = express.Router();
 
 // Import các route con
-// const userRoutes = require("./routes.user");
-// const teacherRoutes = require("./routes.teacher");
-// const adminRoutes = require("./routes.admin");
+const userRoutes = require("./routes.user");
+const teacherRoutes = require("./routes.teacher");
+const adminRoutes = require("./routes.admin");
 const indexController = require("../controllers/index");
 
 // Định nghĩa các nhóm API
-// router.use("/users", userRoutes);
-// router.use("/teachers", teacherRoutes);
-// router.use("/admin", adminRoutes);
+router.use("/users", userRoutes);
+router.use("/teachers", teacherRoutes);
+router.use("/admin", adminRoutes);
 
 router.get("/comments", indexController.getComments);
 router.get("/rates", indexController.getRates);
