@@ -112,7 +112,8 @@ exports.getAchievements = async (req, res) => {
 
 exports.createAchievement = async (req, res) => {
   try {
-    const { id_user, prize, competition } = req.body;
+    const { prize, competition } = req.body;
+    const id_user = req.user._id;
     const newAchievement = new Achievement({ id_user, prize, competition });
     await newAchievement.save();
     res.status(201).json(newAchievement);
@@ -302,9 +303,10 @@ exports.getCourses = async (req, res) => {
 
 exports.createCourse = async (req, res) => {
   try {
-    const { id_user, name, image, price, discount } = req.body;
+    const { name, image, price, discount } = req.body;
+    const id_user = req.user._id;
 
-    if (!id_user || !name || !image || !price || !discount) {
+    if (!name || !image || !price || !discount) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -571,9 +573,10 @@ exports.getExams = async (req, res) => {
 
 exports.createExam = async (req, res) => {
   try {
-    const { id_user, name, link, video } = req.body;
+    const { name, link, video } = req.body;
+    const id_user = req.user._id;
 
-    if (!id_user || !name || !link || !video) {
+    if (!name || !link || !video) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -935,7 +938,8 @@ exports.getRegisters = async (req, res) => {
 
 exports.createRegister = async (req, res) => {
   try {
-    const { id_user, id_material, type } = req.body;
+    const { id_material, type } = req.body;
+    const id_user = req.user._id;
 
     if (![id_user, id_material, type].every(Boolean)) {
       return res.status(400).json({ error: "All fields are required." });
@@ -1003,7 +1007,8 @@ exports.deleteRegister = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   try {
-    const { id_user, id_commented, type, content } = req.body;
+    const { id_commented, type, content } = req.body;
+    const id_user = req.user._id;
     const newComment = new Comment({ id_user, id_commented, type, content });
     await newComment.save();
     res.status(201).json(newComment);
@@ -1051,7 +1056,8 @@ exports.deleteComment = async (req, res) => {
 
 exports.createRate = async (req, res) => {
   try {
-    const { id_user, id_rated, type, content } = req.body;
+    const { id_rated, type, content } = req.body;
+    const id_user = req.user._id;
     const newRate = new Rate({ id_user, id_rated, type, content });
     await newRate.save();
     res.status(201).json(newRate);
