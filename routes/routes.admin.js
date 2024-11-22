@@ -60,7 +60,6 @@ router.put("/describe/:id", adminController.updateDescribe);
 router.delete("/describe/:id", adminController.deleteDescribe);
 
 router.get("/orders", adminController.getOrders);
-router.post("/order", adminController.createOrder);
 router.put("/order/:id", adminController.updateOrder);
 router.delete("/order/:id", adminController.deleteOrder);
 

@@ -823,28 +823,6 @@ exports.getOrders = async (req, res) => {
   }
 };
 
-exports.createOrder = async (req, res) => {
-  try {
-    const { id_user, id_material, type} = req.body;
-
-    if (![id_user, id_material, type].every(Boolean)) {
-      return res.status(400).json({ error: "All fields are required." });
-    }
-
-    const newOrder = await Order.create({ id_user, id_material, type});
-
-    res.status(201).json({
-      message: "Order created successfully.",
-      data: newOrder,
-    });
-  } catch (error) {
-    console.error("Error creating order:", error);
-    res.status(500).json({
-      error: "An error occurred while creating the order.",
-    });
-  }
-};
-
 exports.updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
