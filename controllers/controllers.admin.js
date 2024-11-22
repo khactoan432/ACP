@@ -8,7 +8,10 @@ const {
   Topic,
   Lesson,
   Exam,
+  Overview,
   Order,
+  Describe,
+  Register
 } = require("../models");
 
 exports.getBanners = async (req, res) => {
@@ -292,7 +295,7 @@ exports.getCourses = async (req, res) => {
       .limit(limit);
     res.status(200).json(courses);
   } catch (err) {
-    console.error("Error fetching paginated users:", error);
+    console.error("Error fetching paginated courses:", error);
     res.status(500).json({ error: err.message });
   }
 };
@@ -384,9 +387,15 @@ exports.deleteCourse = async (req, res) => {
 
 exports.getTopics = async (req, res) => {
   try {
-    const topics = await Topic.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const topics = await Topic.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(topics);
   } catch (err) {
+    console.error("Error fetching paginated topics:", error);
     res.status(500).json({ error: err.message });
   }
 };
@@ -394,11 +403,21 @@ exports.getTopics = async (req, res) => {
 exports.createTopic = async (req, res) => {
   try {
     const { id_course, name } = req.body;
-    const newTopic = new Topic({ id_course, name });
-    await newTopic.save();
-    res.status(201).json(newTopic);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    if (!id_course || !name) {
+      return res.status(400).json({ error: "Course ID and name are required." });
+    }
+
+    const newTopic = await Topic.create({ id_course, name });
+
+    res.status(201).json({
+      message: "Topic created successfully.",
+      data: newTopic,
+    });
+  } catch (error) {
+    console.error("Error creating topic:", error);
+
+    res.status(500).json({ error: "An error occurred while creating the topic." });
   }
 };
 
@@ -407,19 +426,29 @@ exports.updateTopic = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Topic by ID and update
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided for update." });
+    }
+
     const updatedTopic = await Topic.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedTopic) {
-      return res.status(404).json({ message: "Topic not found" });
+      return res.status(404).json({ error: "Topic not found." });
     }
 
-    res.status(200).json(updatedTopic);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Topic updated successfully.",
+      data: updatedTopic,
+    });
+  } catch (error) {
+    if (error.kind === "ObjectId") {
+      return res.status(400).json({ error: "Invalid topic ID." });
+    }
+
+    res.status(500).json({ error: "An error occurred while updating the topic." });
   }
 };
 
@@ -442,9 +471,15 @@ exports.deleteTopic = async (req, res) => {
 
 exports.getLessons = async (req, res) => {
   try {
-    const lessons = await Lesson.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const lessons = await Lesson.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(lessons);
   } catch (err) {
+    console.error("Error fetching paginated lessons:", error);
     res.status(500).json({ error: err.message });
   }
 };
@@ -452,11 +487,21 @@ exports.getLessons = async (req, res) => {
 exports.createLesson = async (req, res) => {
   try {
     const { id_topic, name, video, status } = req.body;
-    const newLesson = new Lesson({ id_topic, name, video, status });
-    await newLesson.save();
-    res.status(201).json(newLesson);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    if (!id_topic || !name || !video || status === undefined) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newLesson = await Lesson.create({ id_topic, name, video, status });
+
+    res.status(201).json({
+      message: "Lesson created successfully.",
+      data: newLesson,
+    });
+  } catch (error) {
+    console.error("Error creating lesson:", error);
+
+    res.status(500).json({ error: "An error occurred while creating the lesson." });
   }
 };
 
@@ -465,19 +510,30 @@ exports.updateLesson = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Lesson by ID and update
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided for update." });
+    }
+
     const updatedLesson = await Lesson.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedLesson) {
-      return res.status(404).json({ message: "Lesson not found" });
+      return res.status(404).json({ error: "Lesson not found." });
     }
 
-    res.status(200).json(updatedLesson);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Lesson updated successfully.",
+      data: updatedLesson,
+    });
+  } catch (error) {
+    if (error.kind === "ObjectId") {
+      return res.status(400).json({ error: "Invalid lesson ID." });
+    }
+
+    console.error("Error updating lesson:", error);
+    res.status(500).json({ error: "An error occurred while updating the lesson." });
   }
 };
 
@@ -500,9 +556,15 @@ exports.deleteLesson = async (req, res) => {
 
 exports.getExams = async (req, res) => {
   try {
-    const exams = await Exam.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const exams = await Exam.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(exams);
   } catch (err) {
+    console.error("Error fetching paginated exams:", error);
     res.status(500).json({ error: err.message });
   }
 };
@@ -510,11 +572,21 @@ exports.getExams = async (req, res) => {
 exports.createExam = async (req, res) => {
   try {
     const { id_user, name, link, video } = req.body;
-    const newExam = new Exam({ id_user, name, link, video });
-    await newExam.save();
-    res.status(201).json(newExam);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    if (!id_user || !name || !link || !video) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newExam = await Exam.create({ id_user, name, link, video });
+
+    res.status(201).json({
+      message: "Exam created successfully.",
+      data: newExam,
+    });
+  } catch (error) {
+    console.error("Error creating exam:", error);
+
+    res.status(500).json({ error: "An error occurred while creating the exam." });
   }
 };
 
@@ -523,19 +595,30 @@ exports.updateExam = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Exam by ID and update
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided for update." });
+    }
+
     const updatedExam = await Exam.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedExam) {
-      return res.status(404).json({ message: "Exam not found" });
+      return res.status(404).json({ error: "Exam not found." });
     }
 
-    res.status(200).json(updatedExam);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Exam updated successfully.",
+      data: updatedExam,
+    });
+  } catch (error) {
+    if (error.kind === "ObjectId") {
+      return res.status(400).json({ error: "Invalid exam ID." });
+    }
+
+    console.error("Error updating exam:", error);
+    res.status(500).json({ error: "An error occurred while updating the exam." });
   }
 };
 
@@ -558,21 +641,37 @@ exports.deleteExam = async (req, res) => {
 
 exports.getOverviews = async (req, res) => {
   try {
-    const overviews = await Overview.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const overviews = await Overview.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(overviews);
   } catch (err) {
+    console.error("Error fetching paginated overviews:", error);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createOverview = async (req, res) => {
   try {
-    const { id_material, type, name, decs } = req.body;
-    const newOverview = new Overview({ id_material, type, name, decs });
-    await newOverview.save();
-    res.status(201).json(newOverview);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const { id_material, type, name, desc } = req.body;
+
+    if (!id_material || !type || !name || !desc) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newOverview = await Overview.create({ id_material, type, name, desc });
+
+    res.status(201).json({
+      message: "Overview created successfully.",
+      data: newOverview,
+    });
+  } catch (error) {
+    console.error("Error creating overview:", error);
+
+    res.status(500).json({ error: "An error occurred while creating the overview." });
   }
 };
 
@@ -581,19 +680,27 @@ exports.updateOverview = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Overview by ID and update
+    if (!id) {
+      return res.status(400).json({ error: "Overview ID is required." });
+    }
+
     const updatedOverview = await Overview.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedOverview) {
-      return res.status(404).json({ message: "Overview not found" });
+      return res.status(404).json({ error: "Overview not found." });
     }
 
-    res.status(200).json(updatedOverview);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Overview updated successfully.",
+      data: updatedOverview,
+    });
+  } catch (error) {
+    console.error("Error updating overview:", error);
+
+    res.status(500).json({ error: "An error occurred while updating the overview." });
   }
 };
 
@@ -616,21 +723,40 @@ exports.deleteOverview = async (req, res) => {
 
 exports.getDescribes = async (req, res) => {
   try {
-    const Describes = await Describe.find();
-    res.status(200).json(Describes);
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const describes = await Describe.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
+    res.status(200).json(describes);
   } catch (err) {
+    console.error("Error fetching paginated describes:", error);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createDescribe = async (req, res) => {
   try {
-    const { id_material, type, decs } = req.body;
-    const newDescribe = new Describe({ id_material, type, decs });
+    const { id_material, type, desc } = req.body;
+
+    if (![id_material, type, desc].every(Boolean)) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newDescribe = new Describe({ id_material, type, desc });
     await newDescribe.save();
-    res.status(201).json(newDescribe);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    res.status(201).json({
+      message: "Describe created successfully.",
+      data: newDescribe,
+    });
+  } catch (error) {
+    console.error("Error creating describe:", error);
+
+    res.status(500).json({
+      error: "An unexpected error occurred while creating the describe.",
+    });
   }
 };
 
@@ -639,19 +765,29 @@ exports.updateDescribe = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Describe by ID and update
+    if (!id || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "ID and update data are required." });
+    }
+
     const updatedDescribe = await Describe.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedDescribe) {
-      return res.status(404).json({ message: "Describe not found" });
+      return res.status(404).json({ message: "Describe not found." });
     }
 
-    res.status(200).json(updatedDescribe);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Describe updated successfully.",
+      data: updatedDescribe,
+    });
+  } catch (error) {
+    console.error("Error updating describe:", error);
+
+    res.status(500).json({
+      error: "An unexpected error occurred while updating the describe.",
+    });
   }
 };
 
@@ -674,21 +810,38 @@ exports.deleteDescribe = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
   try {
-    const orders = await Order.find();
+    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const orders = await Order.find()
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(orders);
   } catch (err) {
+    console.error("Error fetching paginated orders:", error);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createOrder = async (req, res) => {
   try {
-    const { id_user, id_material, type, payment_status } = req.body;
-    const newOrder = new Order({ id_user, id_material, type, payment_status });
-    await newOrder.save();
-    res.status(201).json(newOrder);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const { id_user, id_material, type} = req.body;
+
+    if (![id_user, id_material, type].every(Boolean)) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newOrder = await Order.create({ id_user, id_material, type});
+
+    res.status(201).json({
+      message: "Order created successfully.",
+      data: newOrder,
+    });
+  } catch (error) {
+    console.error("Error creating order:", error);
+    res.status(500).json({
+      error: "An error occurred while creating the order.",
+    });
   }
 };
 
@@ -697,19 +850,28 @@ exports.updateOrder = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Order by ID and update
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No data provided to update." });
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+      runValidators: true, // Enforce schema validation rules
     });
 
     if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ error: "Order not found." });
     }
 
-    res.status(200).json(updatedOrder);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Order updated successfully.",
+      data: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    res.status(500).json({
+      error: "An error occurred while updating the order.",
+    });
   }
 };
 
@@ -730,95 +892,128 @@ exports.deleteOrder = async (req, res) => {
   }
 };
 
-exports.getStudents = async (req, res) => {
+exports.getRegisters = async (req, res) => {
   try {
-    // Get the course ID from the request (assumed from query parameters or URL)
-    const { courseId } = req.params;
+    const { id_material, type, page = 1, limit = 5 } = req.query;
 
-    // Ensure courseId is provided
-    if (!courseId) {
-      return res.status(400).json({ message: "Course ID is required." });
+    if (!id_material || !type) {
+      return res.status(400).json({ message: "All fields are required." });
     }
 
-    // Aggregation pipeline
-    const users = await Register.aggregate([
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const parsedLimit = parseInt(limit);
+
+    const registers = await Register.aggregate([
       {
-        // Match registrations for the given course
-        $match: { id_material: parseInt(courseId), type: "COURSE" },
+        $match: { id_material, type },
       },
       {
-        // Lookup users to join user details
-        $lookup: {
-          from: "users", // Collection name (lowercase plural by convention)
-          localField: "id_user", // Field in Register that matches User
-          foreignField: "_id", // Field in User that matches
-          as: "userDetails", // Output array field
+        $addFields: {
+          id_user: { $toObjectId: "$id_user" }, // Convert id_user to ObjectId
         },
       },
       {
-        // Unwind the joined user details (convert array to object)
-        $unwind: "$userDetails",
+        $lookup: {
+          from: "users",
+          localField: "id_user",
+          foreignField: "_id",
+          as: "userDetails",
+        },
       },
       {
-        // Project only required fields (optional)
+        $unwind: {
+          path: "$userDetails",
+          preserveNullAndEmptyArrays: true, // Include entries without matching users
+        },
+      },
+      {
         $project: {
-          _id: 0, // Exclude Register document ID
           id_user: 1,
           id_material: 1,
           "userDetails.name": 1,
           "userDetails.email": 1,
           "userDetails.phone_number": 1,
+          "userDetails.codeforce_name": 1,
+          "userDetails.createdAt": 1,
         },
+      },
+      {
+        $sort: { "userDetails.createdAt": 1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: parsedLimit,
       },
     ]);
 
-    // Respond with the users
-    res.status(200).json(users);
+    res.status(200).json(registers);
   } catch (error) {
-    console.error("Error fetching users for the course:", error);
-    res.status(500).json({ error: "An error occurred while fetching users." });
+    console.error("Error fetching registers:", error);
+    res.status(500).json({ error: "An error occurred while fetching registers." });
   }
 };
 
-exports.createStudent = async (req, res) => {
+exports.createRegister = async (req, res) => {
   try {
     const { id_user, id_material, type } = req.body;
-    const newStudent = new Register({ id_user, id_material, type });
-    await newStudent.save();
-    res.status(201).json(newStudent);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    if (![id_user, id_material, type].every(Boolean)) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const validTypes = ["COURSE", "EXAM"];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ error: `Invalid type. Allowed values are: ${validTypes.join(", ")}.` });
+    }
+
+    const newRegister = await Register.create({ id_user, id_material, type });
+
+    res.status(201).json({
+      message: "Register registration created successfully.",
+      data: newRegister,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while creating the student registration." });
   }
 };
 
-exports.updateStudent = async (req, res) => {
+exports.updateRegister = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    const updatedStudent = await Register.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
-    });
-
-    if (!updatedStudent) {
-      return res.status(404).json({ message: "Register not found" });
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided to update." });
     }
 
-    res.status(200).json(updatedStudent);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const updatedRegister = await Register.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedRegister) {
+      return res.status(404).json({ error: "Register not found." });
+    }
+
+    res.status(200).json({
+      message: "Student registration updated successfully.",
+      data: updatedRegister,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while updating the student registration." });
   }
 };
 
-exports.deleteStudent = async (req, res) => {
+exports.deleteRegister = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Student by ID and delete
-    const deletedStudent = await Register.findByIdAndDelete(id);
+    // Find Register by ID and delete
+    const deletedRegister = await Register.findByIdAndDelete(id);
 
-    if (!deletedStudent) {
+    if (!deletedRegister) {
       return res.status(404).json({ message: "Register not found" });
     }
 

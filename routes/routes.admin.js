@@ -39,10 +39,10 @@ router.post("/lesson", adminController.createLesson);
 router.put("/lesson/:id", adminController.updateLesson);
 router.delete("/lesson/:id", adminController.deleteLesson);
 
-router.get("/students", adminController.getStudents);
-router.post("/student", adminController.createStudent);
-router.put("/student/:id", adminController.updateStudent);
-router.delete("/student/:id", adminController.deleteStudent);
+router.get("/registers", adminController.getRegisters);
+router.post("/register", adminController.createRegister);
+router.put("/register/:id", adminController.updateRegister);
+router.delete("/register/:id", adminController.deleteRegister);
 
 router.get("/exams", adminController.getExams);
 router.post("/exam", adminController.createExam);

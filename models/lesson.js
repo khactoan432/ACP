@@ -17,6 +17,7 @@ const LessonSchema = new mongoose.Schema({
   },
   status: {
     type: String,
+    enum: ["PUBLIC", "PRIVATE"],
     required: true,
   },
   createdAt: {
