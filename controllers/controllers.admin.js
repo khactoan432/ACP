@@ -1008,12 +1008,19 @@ exports.deleteRegister = async (req, res) => {
 exports.createComment = async (req, res) => {
   try {
     const { id_commented, type, content } = req.body;
-    const id_user = req.user._id;
-    const newComment = new Comment({ id_user, id_commented, type, content });
-    await newComment.save();
-    res.status(201).json(newComment);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const id_user= req.user._id;
+    if (!id_commented || !type || !content) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newComment = await Comment.create({ id_user, id_commented, type, content });
+
+    res.status(201).json({
+      message: "Comment created successfully.",
+      data: newComment,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while creating the comment." });
   }
 };
 
