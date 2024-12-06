@@ -5,14 +5,18 @@ const router = express.Router();
 const userRoutes = require("./routes.user");
 const teacherRoutes = require("./routes.teacher");
 const adminRoutes = require("./routes.admin");
-const indexController = require("../controllers/index");
 const authRoutes = require("./routes.auth");
+const upload = require("./routes.upload");
+
+
+const indexController = require("../controllers/index");
 
 // Định nghĩa các nhóm API
 router.use("/users", userRoutes);
 router.use("/teachers", teacherRoutes);
 router.use("/admin", adminRoutes);
 router.use("/auth", authRoutes);
+router.use("/upload", upload);
 
 router.get("/comments", indexController.getComments);
 router.get("/rates", indexController.getRates);
