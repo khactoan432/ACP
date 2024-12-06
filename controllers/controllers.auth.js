@@ -14,9 +14,11 @@ class AuthController {
         repassword,
         phone_number,
         codeforce_name,
-        role,
       } = req.body;
-
+      let role;
+      if (!req.body.role) {
+        role = "USER";
+      }
       // Validation
       try {
         const validationNameCodeforce = await validNameCodeforce(
@@ -67,6 +69,7 @@ class AuthController {
   async loginController(req, res) {
     try {
       const { email, password } = req.body;
+      console.log("log: ", req.body.email);
 
       if (!email || !password) {
         return res
@@ -91,7 +94,7 @@ class AuthController {
 
       // JWT token
       const token = jwt.sign(
-        { email: user.email, role: user.role },
+        { id: user._id, email: user.email, role: user.role },
         process.env.JWT_SECRET || "default_secret",
         { expiresIn: "1d" }
       );
