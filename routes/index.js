@@ -16,7 +16,7 @@ router.use("/users", userRoutes);
 router.use("/teachers", teacherRoutes);
 router.use("/admin", adminRoutes);
 router.use("/auth", authRoutes);
-router.use("/upload", upload);
+router.use("/file", upload);
 
 router.get("/comments", indexController.getComments);
 router.get("/rates", indexController.getRates);
