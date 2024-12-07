@@ -14,12 +14,13 @@ const bucket = storage.bucket(bucketName);
 // Controller: Tải file lên bucket
 exports.uploadFile = async (req, res) => {
   try {
-    console.log("req.file :", req.file);
-    if (!req.file) {
+    console.log("req.uploadFile: ", req.body.image);
+    if (!req.body.image) {
       return res.status(400).json({ message: "No file uploaded." });
     }
-
-    const blob = bucket.file(req.file.originalname); // Tên tệp trong bucket
+    console.log("Uploading file");
+    const blob = bucket.file(req.body.images.originalname);
+    console.log("Uploading file: ", blob);
     const blobStream = blob.createWriteStream();
 
     // Lưu file vào bucket

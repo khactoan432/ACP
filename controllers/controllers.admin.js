@@ -11,8 +11,10 @@ const {
   Overview,
   Order,
   Describe,
-  Register
+  Register,
 } = require("../models");
+
+const { uploadFile } = require("./controllers.upload");
 
 exports.getBanners = async (req, res) => {
   try {
@@ -35,7 +37,7 @@ exports.getBanners = async (req, res) => {
 exports.createBanner = async (req, res) => {
   try {
     const { image } = req.body;
-
+    uploadFile(req, res);
     // Validate the required fields
     if (!image) {
       return res.status(400).json({ error: "Image field is required." });
@@ -407,7 +409,9 @@ exports.createTopic = async (req, res) => {
     const { id_course, name } = req.body;
 
     if (!id_course || !name) {
-      return res.status(400).json({ error: "Course ID and name are required." });
+      return res
+        .status(400)
+        .json({ error: "Course ID and name are required." });
     }
 
     const newTopic = await Topic.create({ id_course, name });
@@ -419,7 +423,9 @@ exports.createTopic = async (req, res) => {
   } catch (error) {
     console.error("Error creating topic:", error);
 
-    res.status(500).json({ error: "An error occurred while creating the topic." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the topic." });
   }
 };
 
@@ -450,7 +456,9 @@ exports.updateTopic = async (req, res) => {
       return res.status(400).json({ error: "Invalid topic ID." });
     }
 
-    res.status(500).json({ error: "An error occurred while updating the topic." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the topic." });
   }
 };
 
@@ -503,7 +511,9 @@ exports.createLesson = async (req, res) => {
   } catch (error) {
     console.error("Error creating lesson:", error);
 
-    res.status(500).json({ error: "An error occurred while creating the lesson." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the lesson." });
   }
 };
 
@@ -535,7 +545,9 @@ exports.updateLesson = async (req, res) => {
     }
 
     console.error("Error updating lesson:", error);
-    res.status(500).json({ error: "An error occurred while updating the lesson." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the lesson." });
   }
 };
 
@@ -589,7 +601,9 @@ exports.createExam = async (req, res) => {
   } catch (error) {
     console.error("Error creating exam:", error);
 
-    res.status(500).json({ error: "An error occurred while creating the exam." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the exam." });
   }
 };
 
@@ -621,7 +635,9 @@ exports.updateExam = async (req, res) => {
     }
 
     console.error("Error updating exam:", error);
-    res.status(500).json({ error: "An error occurred while updating the exam." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the exam." });
   }
 };
 
@@ -665,7 +681,12 @@ exports.createOverview = async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newOverview = await Overview.create({ id_material, type, name, desc });
+    const newOverview = await Overview.create({
+      id_material,
+      type,
+      name,
+      desc,
+    });
 
     res.status(201).json({
       message: "Overview created successfully.",
@@ -674,7 +695,9 @@ exports.createOverview = async (req, res) => {
   } catch (error) {
     console.error("Error creating overview:", error);
 
-    res.status(500).json({ error: "An error occurred while creating the overview." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the overview." });
   }
 };
 
@@ -703,7 +726,9 @@ exports.updateOverview = async (req, res) => {
   } catch (error) {
     console.error("Error updating overview:", error);
 
-    res.status(500).json({ error: "An error occurred while updating the overview." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the overview." });
   }
 };
 
@@ -769,7 +794,9 @@ exports.updateDescribe = async (req, res) => {
     const updateData = req.body;
 
     if (!id || Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: "ID and update data are required." });
+      return res
+        .status(400)
+        .json({ error: "ID and update data are required." });
     }
 
     const updatedDescribe = await Describe.findByIdAndUpdate(id, updateData, {
@@ -932,7 +959,9 @@ exports.getRegisters = async (req, res) => {
     res.status(200).json(registers);
   } catch (error) {
     console.error("Error fetching registers:", error);
-    res.status(500).json({ error: "An error occurred while fetching registers." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching registers." });
   }
 };
 
@@ -947,7 +976,9 @@ exports.createRegister = async (req, res) => {
 
     const validTypes = ["COURSE", "EXAM"];
     if (!validTypes.includes(type)) {
-      return res.status(400).json({ error: `Invalid type. Allowed values are: ${validTypes.join(", ")}.` });
+      return res.status(400).json({
+        error: `Invalid type. Allowed values are: ${validTypes.join(", ")}.`,
+      });
     }
 
     const newRegister = await Register.create({ id_user, id_material, type });
@@ -957,7 +988,9 @@ exports.createRegister = async (req, res) => {
       data: newRegister,
     });
   } catch (error) {
-    res.status(500).json({ error: "An error occurred while creating the student registration." });
+    res.status(500).json({
+      error: "An error occurred while creating the student registration.",
+    });
   }
 };
 
@@ -984,7 +1017,9 @@ exports.updateRegister = async (req, res) => {
       data: updatedRegister,
     });
   } catch (error) {
-    res.status(500).json({ error: "An error occurred while updating the student registration." });
+    res.status(500).json({
+      error: "An error occurred while updating the student registration.",
+    });
   }
 };
 
@@ -1008,19 +1043,26 @@ exports.deleteRegister = async (req, res) => {
 exports.createComment = async (req, res) => {
   try {
     const { id_commented, type, content } = req.body;
-    const id_user= req.user._id;
+    const id_user = req.user._id;
     if (!id_commented || !type || !content) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newComment = await Comment.create({ id_user, id_commented, type, content });
+    const newComment = await Comment.create({
+      id_user,
+      id_commented,
+      type,
+      content,
+    });
 
     res.status(201).json({
       message: "Comment created successfully.",
       data: newComment,
     });
   } catch (error) {
-    res.status(500).json({ error: "An error occurred while creating the comment." });
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the comment." });
   }
 };
 
