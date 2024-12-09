@@ -8,7 +8,6 @@ const {
 // Controller: Tải file lên bucket
 exports.uploadFiles = async (req, res) => {
   try {
-    console.log("req: ", req.files);
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "No files uploaded." });
     }

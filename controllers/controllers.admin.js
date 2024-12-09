@@ -20,8 +20,6 @@ exports.getBanners = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    console.log("skip: ", skip);
-    console.log("limit: ", limit);
 
     const banners = await Banner.find()
       .sort({ createdAt: 1 })

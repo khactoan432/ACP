@@ -11,7 +11,6 @@ const upload = require("./routes.upload");
 const indexController = require("../controllers/index");
 
 // Định nghĩa các nhóm API
-console.log("log upload");
 router.use("/users", userRoutes);
 router.use("/teachers", teacherRoutes);
 router.use("/admin", adminRoutes);

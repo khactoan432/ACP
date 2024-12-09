@@ -15,7 +15,6 @@ const upload = multer({
 });
 
 // Định nghĩa các route
-console.log("routes uplaod");
 router.post("/upload", upload.array("files"), uploadFiles); // Upload file
 router.get("/files", listFiles); // Lấy danh sách file
 router.delete("/files/:filename", deleteFile); // Xóa file

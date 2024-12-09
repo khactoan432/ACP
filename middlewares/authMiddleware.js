@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 
 const authenticateToken = (req, res, next) => {
   const token = req.header("Authorization");
-  console.log("Authenticating: ", token);
   if (!token) {
     return res
       .status(401)
@@ -12,7 +11,6 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("decoded.role: ", decoded.role);
 
     req.user = decoded;
     next();
@@ -24,7 +22,6 @@ const authenticateToken = (req, res, next) => {
 const authorizeRole = (allowedRoles) => (req, res, next) => {
   const token = req.header("Authorization");
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  console.log("decoded token: ", decoded.role);
   if (!allowedRoles.includes(decoded.role)) {
     return res
       .status(403)
