@@ -1,6 +1,10 @@
-const express = require('express');
-const multer = require('multer');
-const { uploadFiles, listFiles, deleteFile } = require('../controllers/controllers.upload');
+const express = require("express");
+const multer = require("multer");
+const {
+  uploadFiles,
+  listFiles,
+  deleteFile,
+} = require("../controllers/controllers.upload");
 
 // Khởi tạo router
 const router = express.Router();
@@ -11,8 +15,9 @@ const upload = multer({
 });
 
 // Định nghĩa các route
-router.post('/upload', upload.array('files'), uploadFiles); // Upload file
-router.get('/files', listFiles); // Lấy danh sách file
-router.delete('/files/:filename', deleteFile); // Xóa file
+console.log("routes uplaod");
+router.post("/upload", upload.array("files"), uploadFiles); // Upload file
+router.get("/files", listFiles); // Lấy danh sách file
+router.delete("/files/:filename", deleteFile); // Xóa file
 
 module.exports = router;

@@ -1,4 +1,5 @@
 require("dotenv").config();
+const fileUpload = require("express-fileupload");
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
