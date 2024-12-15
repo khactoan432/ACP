@@ -2,7 +2,7 @@
 const jwt = require("jsonwebtoken");
 
 const authenticateToken = (req, res, next) => {
-  const token = req.header("Authorization");
+  const token = req.header("Authorization").slice(7);
   if (!token) {
     return res
       .status(401)
@@ -11,7 +11,9 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    if (!decoded) {
+      console.log("Token expired || missing token");
+    }
     req.user = decoded;
     next();
   } catch (err) {
@@ -20,7 +22,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 const authorizeRole = (allowedRoles) => (req, res, next) => {
-  const token = req.header("Authorization");
+  const token = req.header("Authorization").slice(7);
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   if (!allowedRoles.includes(decoded.role)) {
     return res

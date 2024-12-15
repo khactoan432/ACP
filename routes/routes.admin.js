@@ -6,6 +6,25 @@ const {
   authorizeRole,
 } = require("../middlewares/authMiddleware");
 
+const multer = require("multer");
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === "fileImage" && !file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files are allowed for fileImage"));
+    }
+    if (file.fieldname === "fileVideo" && !file.mimetype.startsWith("video/")) {
+      return cb(new Error("Only video files are allowed for fileVideo"));
+    }
+    cb(null, true);
+  },
+});
+
+const uploadFields = upload.fields([
+  { name: "fileImage" },
+  { name: "fileVideo" },
+]);
+
 router.use(authenticateToken);
 router.use(authorizeRole(["ADMIN"]));
 
@@ -25,9 +44,12 @@ router.put("/user/:id", adminController.updateUser);
 router.delete("/user/:id", adminController.deleteUser);
 
 router.get("/courses", adminController.getCourses);
-router.post("/course", adminController.createCourse);
+router.post("/course", uploadFields, adminController.createCourse);
 router.put("/course/:id", adminController.updateCourse);
 router.delete("/course/:id", adminController.deleteCourse);
+
+//course detail
+router.get("/course-detail/:id", adminController.getCourseDetail);
 
 router.get("/topics", adminController.getTopics);
 router.post("/topic", adminController.createTopic);
@@ -35,9 +57,11 @@ router.put("/topic/:id", adminController.updateTopic);
 router.delete("/topic/:id", adminController.deleteTopic);
 
 router.get("/lessons", adminController.getLessons);
-router.post("/lesson", adminController.createLesson);
+router.post("/lesson", uploadFields, adminController.createLesson);
 router.put("/lesson/:id", adminController.updateLesson);
 router.delete("/lesson/:id", adminController.deleteLesson);
+
+router.post("/exercise", adminController.createExercise);
 
 router.get("/registers", adminController.getRegisters);
 router.post("/register", adminController.createRegister);

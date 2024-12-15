@@ -17,7 +17,7 @@ const ExerciseSchema = new mongoose.Schema({
   },
   score: {
     type: String,
-    required: true,
+    required: false,
   },
   createdAt: {
     type: Date,

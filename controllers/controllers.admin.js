@@ -12,7 +12,15 @@ const {
   Order,
   Describe,
   Register,
+  Exercise,
 } = require("../models");
+
+const {
+  uploadFileToGCS,
+  uploadMultipleFilesToGCS,
+  listFilesFromGCS,
+  deleteFileFromGCS,
+} = require("../helpers/googleCloudStorage");
 
 const { uploadFile } = require("./controllers.upload");
 
@@ -289,7 +297,7 @@ exports.deleteUser = async (req, res) => {
 exports.getCourses = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const limit = parseInt(req.query.limit); // Default: 10 (fetch 10 records)
     const courses = await Course.find()
       .sort({ createdAt: 1 })
       .skip(skip)
@@ -303,17 +311,26 @@ exports.getCourses = async (req, res) => {
 
 exports.createCourse = async (req, res) => {
   try {
-    const { name, image, price, discount } = req.body;
+    const { name, price, discount } = req.body;
+    const fileImage = req.files["fileImage"];
+    const fileVideo = req.files["fileVideo"];
     const id_user = req.user._id;
 
-    if (!name || !image || !price || !discount) {
+    if (!name || !fileImage || !price || !discount) {
       return res.status(400).json({ error: "All fields are required." });
     }
-
+    console.log("filevideo: ", fileVideo);
+    const uploadedFileImageUrls = await uploadMultipleFilesToGCS(fileImage);
+    let uploadedFilesVideoUrls = "";
+    console.log("url_filevideo:", fileVideo);
+    if (fileVideo) {
+      uploadedFilesVideoUrls = await uploadMultipleFilesToGCS(fileVideo);
+    }
     const newCourse = await Course.create({
       id_user,
       name,
-      image,
+      image: uploadedFileImageUrls[0],
+      video: uploadedFilesVideoUrls ? uploadedFilesVideoUrls[0] : "",
       price,
       discount,
     });
@@ -383,6 +400,80 @@ exports.deleteCourse = async (req, res) => {
 
     res.status(200).json({ message: "Course deleted successfully" });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const { ObjectId } = require("mongoose").Types;
+
+exports.getCourseDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const structCourse = {};
+
+    // Lấy thông tin khóa học
+    const course = await Course.findById(id).lean();
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    structCourse.course = course;
+
+    // Lấy thông tin describes và overviews
+    const describes = await Describe.find({ id_material: id }).lean(); // Lean trả về JSON thuần
+    if (describes.length > 0) {
+      const describeIds = describes.map((d) => d._id.toString());
+      const allOverviews = await Overview.find({
+        id_material: { $in: describeIds },
+      }).lean();
+      console.log("allOverviews: ", allOverviews);
+
+      describes.forEach((d) => {
+        d.overviews = allOverviews.filter(
+          (o) => o.id_material.toString() === d._id.toString()
+        );
+      });
+
+      console.log("describes: ", describes);
+    }
+
+    // Lấy thông tin topics, lessons và exercises
+    const topics = await Topic.find({ id_course: id }).lean();
+    if (topics.length > 0) {
+      const topicIds = topics.map((t) => t._id.toString());
+      console.log("topicIds: ", topicIds);
+
+      const allLessons = await Lesson.find({
+        id_topic: { $in: topicIds },
+      }).lean();
+
+      const lessonIds = allLessons.map((l) => l._id.toString());
+      const allExercises = await Exercise.find({
+        id_lesson: { $in: lessonIds },
+      }).lean();
+      console.log("exercises: ", allExercises);
+
+      topics.forEach((t) => {
+        t.lessons = allLessons
+          .filter((l) => l.id_topic === t._id.toString())
+          .map((l) => ({
+            ...l,
+            exercises: allExercises.filter(
+              (e) => e.id_lesson === l._id.toString()
+            ),
+          }));
+      });
+    }
+
+    // Kết hợp dữ liệu vào structCourse
+    structCourse.course.describes = describes;
+    structCourse.course.topics = topics;
+
+    res.status(200).json({
+      data: structCourse,
+      message: "Get course detail successfully!",
+    });
+  } catch (err) {
+    console.error(err.message);
     res.status(500).json({ error: err.message });
   }
 };
@@ -494,13 +585,26 @@ exports.getLessons = async (req, res) => {
 
 exports.createLesson = async (req, res) => {
   try {
-    const { id_topic, name, video, status } = req.body;
+    const { id_topic, name, status } = req.body;
+    const fileImage = req.files["fileImage"];
+    // const fileVideo = req.files["fileVideo"];
 
-    if (!id_topic || !name || !video || status === undefined) {
+    if (!id_topic || !name || !status) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newLesson = await Lesson.create({ id_topic, name, video, status });
+    const uploadedFileImageUrls = await uploadMultipleFilesToGCS(fileImage);
+    let uploadedFilesVideoUrls = "";
+    // if (fileVideo) {
+    //   uploadedFilesVideoUrls = await uploadMultipleFilesToGCS(fileVideo);
+    // }
+
+    const newLesson = await Lesson.create({
+      id_topic,
+      name,
+      video: uploadedFileImageUrls[0],
+      status,
+    });
 
     res.status(201).json({
       message: "Lesson created successfully.",
@@ -563,6 +667,36 @@ exports.deleteLesson = async (req, res) => {
     res.status(200).json({ message: "Lesson deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createExercise = async (req, res) => {
+  try {
+    const { id_lesson, dataExercise } = req.body;
+
+    if (!id_lesson) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+    console.log("dataExercise: ", dataExercise);
+    let dataLink = [];
+    if (dataExercise.length > 0) {
+      for (let i = 0; i < dataExercise.length; i++) {
+        const name = dataExercise[i].name;
+        const link = dataExercise[i].link;
+        const newExercise = await Exercise.create({ id_lesson, name, link });
+        dataLink.push(newExercise);
+      }
+    }
+    res.status(201).json({
+      message: "Lesson created successfully.",
+      data: dataLink,
+    });
+  } catch (error) {
+    console.error("Error creating lesson:", error);
+
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the lesson." });
   }
 };
 
@@ -673,29 +807,36 @@ exports.getOverviews = async (req, res) => {
 
 exports.createOverview = async (req, res) => {
   try {
-    const { id_material, type, name, desc } = req.body;
+    const { id_material, type, desc } = req.body;
 
-    if (!id_material || !type || !name || !desc) {
-      return res.status(400).json({ error: "All fields are required." });
+    // Kiểm tra dữ liệu đầu vào
+    if (!id_material || !type || !desc) {
+      return res.status(400).json({
+        error: "All fields are required, and 'desc' must be a non-empty array.",
+      });
     }
 
-    const newOverview = await Overview.create({
-      id_material,
-      type,
-      name,
-      desc,
-    });
+    const overviews = [];
+
+    for (let i = 0; i < desc.length; i++) {
+      const newOverview = await Overview.create({
+        id_material,
+        type,
+        desc: desc[i].content,
+      });
+      overviews.push(newOverview);
+    }
 
     res.status(201).json({
-      message: "Overview created successfully.",
-      data: newOverview,
+      message: "Overviews created successfully.",
+      data: overviews,
     });
   } catch (error) {
     console.error("Error creating overview:", error);
 
     res
       .status(500)
-      .json({ error: "An error occurred while creating the overview." });
+      .json({ error: "An error occurred while creating the overviews." });
   }
 };
 
@@ -771,7 +912,11 @@ exports.createDescribe = async (req, res) => {
     }
 
     const newDescribe = new Describe({ id_material, type, desc });
-    await newDescribe.save();
+    await Course.findByIdAndUpdate(
+      id_material,
+      { $push: { describeIds: newDescribe._id } },
+      { new: true }
+    );
 
     res.status(201).json({
       message: "Describe created successfully.",

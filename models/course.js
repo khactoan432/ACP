@@ -15,6 +15,10 @@ const CourseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  video: {
+    type: String,
+    required: false,
+  },
   price: {
     type: String,
     required: true,
@@ -27,6 +31,7 @@ const CourseSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  describeIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Describe" }],
 });
 
 // Tạo model

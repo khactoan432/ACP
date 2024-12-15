@@ -1,10 +1,10 @@
-const { Storage } = require('@google-cloud/storage');
-const path = require('path');
+const { Storage } = require("@google-cloud/storage");
+const path = require("path");
 require("dotenv").config();
 
 // Kết nối với Google Cloud Storage bằng Service Account Key
 const storage = new Storage({
-  keyFilename: path.join(__dirname, '../google-cloud-key.json'), // Đường dẫn tới Service Account Key
+  keyFilename: path.join(__dirname, "../google-cloud-key.json"), // Đường dẫn tới Service Account Key
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID, // Project ID từ file .env
 });
 
@@ -18,11 +18,11 @@ const uploadFileToGCS = async (fileBuffer, fileName) => {
     return new Promise((resolve, reject) => {
       const blobStream = blob.createWriteStream();
 
-      blobStream.on('error', (err) => {
+      blobStream.on("error", (err) => {
         reject(new Error(`Upload error: ${err.message}`));
       });
 
-      blobStream.on('finish', () => {
+      blobStream.on("finish", () => {
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${blob.name}`;
         resolve(publicUrl);
       });
@@ -39,6 +39,7 @@ const uploadFileToGCS = async (fileBuffer, fileName) => {
  */
 const uploadMultipleFilesToGCS = async (files) => {
   try {
+    console.log("files: ", files);
     const uploadPromises = files.map((file) =>
       uploadFileToGCS(file.buffer, file.originalname)
     );

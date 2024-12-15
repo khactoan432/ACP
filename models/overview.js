@@ -11,11 +11,6 @@ const OverviewSchema = new mongoose.Schema({
     enum: ["COURSE", "EXAM"],
     required: true,
   },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
   desc: {
     type: String,
     required: true,
