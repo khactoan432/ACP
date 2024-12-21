@@ -5,6 +5,7 @@ const OverviewSchema = new mongoose.Schema({
   id_material: {
     type: String,
     required: true,
+    ref: "Describe",
   },
   type: {
     type: String,

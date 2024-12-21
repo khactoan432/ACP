@@ -333,6 +333,8 @@ exports.createCourse = async (req, res) => {
       video: uploadedFilesVideoUrls ? uploadedFilesVideoUrls[0] : "",
       price,
       discount,
+      describeIds: [],
+      topicIds: [],
     });
 
     res.status(201).json({
@@ -357,17 +359,46 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
+    let fileImage = "";
+    let image = "";
+    if (req.files["fileImage"]) {
+      fileImage = req.files["fileImage"];
+      image = await uploadMultipleFilesToGCS(fileImage);
+    } else {
+      image = req.body.image;
     }
 
-    const updatedCourse = await Course.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    let fileVideo = "";
+    let video = "";
+    if (req.files["fileVideo"]) {
+      fileVideo = req.files["fileImage"];
+      image = await uploadMultipleFilesToGCS(fileImage);
+    } else {
+      video = req.body.video;
+    }
 
+    const { name, price, discount } = req.body;
+
+    if (!name || !image || !price || !discount) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    console.log("check here");
+
+    const updatedCourse = await Course.findByIdAndUpdate(
+      id,
+      {
+        name,
+        price,
+        discount,
+        image: image,
+        video: video,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
     if (!updatedCourse) {
       return res.status(404).json({ error: "Course not found." });
     }
@@ -389,18 +420,43 @@ exports.updateCourse = async (req, res) => {
 
 exports.deleteCourse = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // Course ID to be deleted
 
-    // Find Course by ID and delete
+    // Step 1: Delete all Describe documents related to the course
+    await Describe.deleteMany({ id_material: id });
+
+    // Step 2: Delete all Topic documents related to the course
+    const topics = await Topic.find({ id_course: id });
+
+    // Step 3: For each topic, delete all associated Lesson documents
+    const topicIds = topics.map((topic) => topic._id);
+    await Lesson.deleteMany({ id_topic: { $in: topicIds } });
+
+    // Step 4: For each lesson, delete all associated Exercise documents
+    const lessonIds = await Lesson.find({ id_topic: { $in: topicIds } });
+    const lessonIdsArray = lessonIds.map((lesson) => lesson._id);
+    await Exercise.deleteMany({ id_lesson: { $in: lessonIdsArray } });
+
+    // Step 5: Delete all Topic documents related to the course
+    await Topic.deleteMany({ id_course: id });
+
+    // Step 6: Finally, delete the Course document
     const deletedCourse = await Course.findByIdAndDelete(id);
 
     if (!deletedCourse) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ error: "Course not found." });
     }
 
-    res.status(200).json({ message: "Course deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      message: "Course and all related documents deleted successfully.",
+      data: deletedCourse,
+    });
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    res.status(500).json({
+      error:
+        "An error occurred while deleting the course and related documents.",
+    });
   }
 };
 
@@ -416,31 +472,29 @@ exports.getCourseDetail = async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-    structCourse.course = course;
+    structCourse.course = JSON.parse(JSON.stringify(course));
 
-    // Lấy thông tin describes và overviews
-    const describes = await Describe.find({ id_material: id }).lean(); // Lean trả về JSON thuần
+    const describesData = await Describe.find({ id_material: id }).lean();
+    let describes = JSON.parse(JSON.stringify(describesData)); // copy deep dataDescription
+
     if (describes.length > 0) {
       const describeIds = describes.map((d) => d._id.toString());
       const allOverviews = await Overview.find({
         id_material: { $in: describeIds },
       }).lean();
-      console.log("allOverviews: ", allOverviews);
 
       describes.forEach((d) => {
         d.overviews = allOverviews.filter(
           (o) => o.id_material.toString() === d._id.toString()
         );
       });
-
-      console.log("describes: ", describes);
     }
 
-    // Lấy thông tin topics, lessons và exercises
-    const topics = await Topic.find({ id_course: id }).lean();
+    const topicsData = await Topic.find({ id_course: id }).lean();
+    let topics = JSON.parse(JSON.stringify(topicsData));
+
     if (topics.length > 0) {
       const topicIds = topics.map((t) => t._id.toString());
-      console.log("topicIds: ", topicIds);
 
       const allLessons = await Lesson.find({
         id_topic: { $in: topicIds },
@@ -450,7 +504,6 @@ exports.getCourseDetail = async (req, res) => {
       const allExercises = await Exercise.find({
         id_lesson: { $in: lessonIds },
       }).lean();
-      console.log("exercises: ", allExercises);
 
       topics.forEach((t) => {
         t.lessons = allLessons
@@ -464,7 +517,6 @@ exports.getCourseDetail = async (req, res) => {
       });
     }
 
-    // Kết hợp dữ liệu vào structCourse
     structCourse.course.describes = describes;
     structCourse.course.topics = topics;
 
@@ -503,7 +555,12 @@ exports.createTopic = async (req, res) => {
         .json({ error: "Course ID and name are required." });
     }
 
-    const newTopic = await Topic.create({ id_course, name });
+    const newTopic = await Topic.create({ id_course, name, lessonIds: [] });
+    await Course.findByIdAndUpdate(
+      id_course,
+      { $push: { topicIds: newTopic._id } },
+      { new: true }
+    );
 
     res.status(201).json({
       message: "Topic created successfully.",
@@ -605,6 +662,11 @@ exports.createLesson = async (req, res) => {
       video: uploadedFileImageUrls[0],
       status,
     });
+    await Topic.findByIdAndUpdate(
+      id_topic,
+      { $push: { lessonIds: newLesson._id } },
+      { new: true }
+    );
 
     res.status(201).json({
       message: "Lesson created successfully.",
@@ -684,6 +746,13 @@ exports.createExercise = async (req, res) => {
         const name = dataExercise[i].name;
         const link = dataExercise[i].link;
         const newExercise = await Exercise.create({ id_lesson, name, link });
+
+        await Lesson.findByIdAndUpdate(
+          id_lesson,
+          { $push: { exerciseIds: newExercise._id } },
+          { new: true }
+        );
+
         dataLink.push(newExercise);
       }
     }
@@ -816,20 +885,22 @@ exports.createOverview = async (req, res) => {
       });
     }
 
-    const overviews = [];
+    const newOverview = await Overview.create({
+      id_material,
+      type,
+      desc: desc,
+    });
 
-    for (let i = 0; i < desc.length; i++) {
-      const newOverview = await Overview.create({
-        id_material,
-        type,
-        desc: desc[i].content,
-      });
-      overviews.push(newOverview);
-    }
+    // Push _id của Overview vào Describe
+    await Describe.findByIdAndUpdate(
+      id_material,
+      { $push: { overviewIds: newOverview._id } },
+      { new: true }
+    );
 
     res.status(201).json({
       message: "Overviews created successfully.",
-      data: overviews,
+      data: newOverview,
     });
   } catch (error) {
     console.error("Error creating overview:", error);
@@ -911,7 +982,13 @@ exports.createDescribe = async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newDescribe = new Describe({ id_material, type, desc });
+    const newDescribe = await Describe.create({
+      id_material,
+      type,
+      desc,
+      overviewIds: [],
+    });
+
     await Course.findByIdAndUpdate(
       id_material,
       { $push: { describeIds: newDescribe._id } },

@@ -5,6 +5,7 @@ const LessonSchema = new mongoose.Schema({
   id_topic: {
     type: String,
     required: true,
+    ref: "Topic",
   },
   name: {
     type: String,
@@ -24,6 +25,7 @@ const LessonSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  exerciseIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Exercise" }],
 });
 
 // Tạo model

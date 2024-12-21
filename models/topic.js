@@ -5,6 +5,7 @@ const TopicSchema = new mongoose.Schema({
   id_course: {
     type: String,
     required: true,
+    ref: "Course",
   },
   name: {
     type: String,
@@ -15,6 +16,7 @@ const TopicSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  lessonIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }],
 });
 
 // Tạo model

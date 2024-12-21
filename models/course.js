@@ -32,6 +32,7 @@ const CourseSchema = new mongoose.Schema({
     default: Date.now,
   },
   describeIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Describe" }],
+  topicIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Topic" }],
 });
 
 // Tạo model

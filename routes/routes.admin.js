@@ -45,7 +45,7 @@ router.delete("/user/:id", adminController.deleteUser);
 
 router.get("/courses", adminController.getCourses);
 router.post("/course", uploadFields, adminController.createCourse);
-router.put("/course/:id", adminController.updateCourse);
+router.put("/course/:id", uploadFields, adminController.updateCourse);
 router.delete("/course/:id", adminController.deleteCourse);
 
 //course detail
@@ -78,7 +78,7 @@ router.post("/overview", adminController.createOverview);
 router.put("/overview/:id", adminController.updateOverview);
 router.delete("/overview/:id", adminController.deleteOverview);
 
-router.get("/describes", adminController.getDescribes);
+router.get("/describes/:id", adminController.getDescribes);
 router.post("/describe", adminController.createDescribe);
 router.put("/describe/:id", adminController.updateDescribe);
 router.delete("/describe/:id", adminController.deleteDescribe);

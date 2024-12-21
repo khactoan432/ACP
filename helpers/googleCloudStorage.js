@@ -39,7 +39,6 @@ const uploadFileToGCS = async (fileBuffer, fileName) => {
  */
 const uploadMultipleFilesToGCS = async (files) => {
   try {
-    console.log("files: ", files);
     const uploadPromises = files.map((file) =>
       uploadFileToGCS(file.buffer, file.originalname)
     );

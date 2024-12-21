@@ -5,10 +5,11 @@ const DescribeSchema = new mongoose.Schema({
   id_material: {
     type: String,
     required: true,
+    ref: "Course",
   },
   type: {
     type: String,
-    enum: ["COURSE", "EXAM","OVERVIEW"],
+    enum: ["COURSE", "EXAM", "OVERVIEW"],
     required: true,
   },
   desc: {
@@ -20,6 +21,7 @@ const DescribeSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  overviewIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Overview" }],
 });
 
 // Tạo model
