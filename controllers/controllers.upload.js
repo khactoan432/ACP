@@ -8,21 +8,21 @@ const {
 // Controller: Tải file lên bucket
 exports.uploadFiles = async (req, res) => {
   try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded." });
+    const { folderPath } = req.body; 
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded!" });
     }
 
-    // Sử dụng helper để upload nhiều file
-    const uploadedFilesUrls = await uploadMultipleFilesToGCS(req.files);
+    const publicUrls = await uploadMultipleFilesToGCS(files, folderPath);
 
     res.status(200).json({
       message: "Files uploaded successfully!",
-      urls: uploadedFilesUrls,
+      urls: publicUrls,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+    res.status(500).json({ message: "Upload failed!", error: error.message });
   }
 };
 

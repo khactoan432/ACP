@@ -12,39 +12,43 @@ const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME; // Tên bucket từ fil
 const bucket = storage.bucket(bucketName);
 
 // Helper: Upload một file lên Google Cloud Storage
-const uploadFileToGCS = async (fileBuffer, fileName) => {
+const uploadFileToGCS = async (file, folderPath = "") => {
   try {
-    const blob = bucket.file(fileName);
+    const filePath = folderPath ? `${folderPath}/${file.originalname}` : file.originalname; // Gắn folder vào trước tên file
+    const blob = bucket.file(filePath);
+
     return new Promise((resolve, reject) => {
       const blobStream = blob.createWriteStream();
 
-      blobStream.on('error', (err) => {
+      blobStream.on("error", (err) => {
         reject(new Error(`Upload error: ${err.message}`));
       });
 
-      blobStream.on('finish', () => {
+      blobStream.on("finish", () => {
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${blob.name}`;
         resolve(publicUrl);
       });
 
-      blobStream.end(fileBuffer);
+      blobStream.end(file.buffer);
     });
   } catch (error) {
-    throw new Error(error.message);
+    console.log(error.message);
+    return new Error(error.message);
   }
 };
 
 /**
  * Helper: Upload nhiều file lên Google Cloud Storage
  */
-const uploadMultipleFilesToGCS = async (files) => {
+const uploadMultipleFilesToGCS = async (files, folderPath = "") => {
   try {
     const uploadPromises = files.map((file) =>
-      uploadFileToGCS(file.buffer, file.originalname)
+      uploadFileToGCS(file, folderPath)
     );
     return await Promise.all(uploadPromises);
   } catch (error) {
-    throw new Error(error.message);
+    console.log(error.message);
+    return new Error(error.message);
   }
 };
 
@@ -57,7 +61,8 @@ const listFilesFromGCS = async () => {
       url: `https://storage.googleapis.com/${bucketName}/${file.name}`,
     }));
   } catch (error) {
-    throw new Error(error.message);
+    console.log(error.message);
+    return new Error(error.message);
   }
 };
 
@@ -67,7 +72,8 @@ const deleteFileFromGCS = async (fileName) => {
     await bucket.file(fileName).delete();
     return `File ${fileName} deleted successfully!`;
   } catch (error) {
-    throw new Error(error.message);
+    console.log(error.message);
+    return new Error(error.message);
   }
 };
 

@@ -1,59 +1,75 @@
-const {
-  User,
-  Banner,
-  Achievement,
-  Comment,
-  Rate,
-  Course,
-  Topic,
-  Lesson,
-  Exam,
-  Overview,
-  Order,
-  Describe,
-  Register,
-} = require("../models");
+const { User, Banner, Achievement, Comment, Rate, Course, Topic, Lesson, Exam, Overview, Order, Describe, Register } = require("../models");
 
-const { uploadFile } = require("./controllers.upload");
+const { validNameCodeforce, validUser } = require("../helpers/validations");
+const bcrypt = require("bcrypt");
+
+const {
+  uploadFileToGCS,
+  uploadMultipleFilesToGCS,
+  listFilesFromGCS,
+  deleteFileFromGCS,
+} = require("../helpers/googleCloudStorage");
 
 exports.getBanners = async (req, res) => {
   try {
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+
+    // Tính số lượng banners
+    const totalBanners = await Banner.countDocuments();
 
     const banners = await Banner.find()
       .sort({ createdAt: 1 })
-      .skip(skip)
+      .skip((page-1)*limit)
       .limit(limit);
-    res.status(200).json(banners);
+    res.status(200).json({
+      message: "Get banners successfully.",
+      total: totalBanners, 
+      data: banners
+    });
   } catch (err) {
-    console.error("Error fetching paginated banners:", error);
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching paginated banners:", err);
+    res.status(500).json({ err: err.message });
   }
 };
 
 exports.createBanner = async (req, res) => {
   try {
-    const { image } = req.body;
-    uploadFile(req, res);
-    // Validate the required fields
-    if (!image) {
-      return res.status(400).json({ error: "Image field is required." });
+    const { folderPath } = req.body;
+    const files = req.files;
+
+    if (!folderPath) {
+      return res.status(400).json({ message: "Folder path is required!" });
     }
 
-    // Create and save the new banner
-    const newBanner = await Banner.create({ image });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded!" });
+    }
 
-    // Send a successful response
+    // Upload multiple files to Google Cloud Storage
+    const publicUrls = await uploadMultipleFilesToGCS(files, "Banners");
+
+    if (!publicUrls || publicUrls.length === 0) {
+      return res.status(500).json({ message: "Failed to upload files." });
+    }
+
+    // Save each image URL to the database
+    const bannerPromises = publicUrls.map((url) =>
+      Banner.create({ image: url })
+    );
+    const banners = await Promise.all(bannerPromises);
+
+    // Send a successful response with the created banners
     res.status(201).json({
-      message: "Banner created successfully.",
-      data: newBanner,
+      message: "Create banners successfully.",
+      data: banners,
     });
-  } catch (error) {
-    console.error("Error creating banner:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while creating the banner." });
+  } catch (err) {
+    console.error("Error creating banner:", err);
+    res.status(500).json({
+      message: "An error occurred while creating the banner.",
+      error: err.message,
+    });
   }
 };
 
@@ -61,6 +77,28 @@ exports.updateBanner = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    const files = req.files[0];
+    
+    const publicUrl = await uploadFileToGCS(files, "Banners");
+
+    if (!publicUrl) {
+      return res.status(500).json({ message: "Failed to upload file." });
+    }
+
+    // Find Banner by ID
+    const banner = await Banner.findById(id);
+
+    if (!banner) {
+      return res.status(404).json({ message: "Banner not found" });
+    }
+
+    // Lấy tên file từ URL của banner
+    const fileName = banner.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+    // Xóa file tương ứng trong Google Cloud Storage
+    await deleteFileFromGCS(fileName);
+
+    updateData.image=publicUrl;
 
     // Find Banner by ID and update
     const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, {
@@ -72,7 +110,10 @@ exports.updateBanner = async (req, res) => {
       return res.status(404).json({ message: "Banner not found" });
     }
 
-    res.status(200).json(updatedBanner);
+    res.status(200).json({
+      message: "Update banner successfully.",
+      data: updatedBanner
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -82,43 +123,93 @@ exports.deleteBanner = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Banner by ID and delete
+    // Find Banner by ID
+    const banner = await Banner.findById(id);
+
+    if (!banner) {
+      return res.status(404).json({ message: "Banner not found" });
+    }
+
+    // Lấy tên file từ URL của banner
+    const fileName = banner.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+    // Xóa file tương ứng trong Google Cloud Storage
+    await deleteFileFromGCS(fileName);
+
+    // Xóa Banner trong cơ sở dữ liệu
     const deletedBanner = await Banner.findByIdAndDelete(id);
 
     if (!deletedBanner) {
       return res.status(404).json({ message: "Banner not found" });
     }
 
-    res.status(200).json({ message: "Banner deleted successfully" });
+    res.status(200).json({ 
+      message: "Delete banner successfully",
+      data: deletedBanner
+    });
   } catch (err) {
+    console.error("Error deleting banner:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getAchievements = async (req, res) => {
   try {
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+
+    // Tính số lượng
+    const totalAchievements = await Achievement.countDocuments();
+
     const achievements = await Achievement.find()
       .sort({ createdAt: 1 })
-      .skip(skip)
+      .skip((page-1)*limit)
       .limit(limit);
-    res.status(200).json(achievements);
+    res.status(200).json({
+      message: "Get achievements successfully.",
+      total: totalAchievements, 
+      data: achievements
+    });
   } catch (err) {
-    console.error("Error fetching paginated achievements:", error);
+    console.error("Error fetching paginated achievements:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createAchievement = async (req, res) => {
   try {
-    const { prize, competition } = req.body;
-    const id_user = req.user._id;
-    const newAchievement = new Achievement({ id_user, prize, competition });
-    await newAchievement.save();
-    res.status(201).json(newAchievement);
+    const files = req.files;
+    const { email_user, prize, competition } = req.body;
+
+    if (!email_user || !prize || !competition) {
+      return res.status(400).json({ message: "All fields are required!" });
+    }
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded!" });
+    }
+
+    // Upload multiple files to Google Cloud Storage
+    const publicUrl = await uploadFileToGCS(files[0], "Achievements");
+
+    if (!publicUrl) {
+      return res.status(500).json({ message: "Failed to upload files." });
+    }
+
+    // Save image URL to the database
+    const achievement = await Achievement.create({ email_user, prize, competition, image: publicUrl });
+
+    // Send a successful response with the created banners
+    res.status(201).json({
+      message: "Create achievements successfully.",
+      data: achievement,
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("Error creating achievements:", err);
+    res.status(500).json({
+      message: "An error occurred while creating the achievements.",
+      error: err.message,
+    });
   }
 };
 
@@ -126,36 +217,48 @@ exports.updateAchievement = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    const files = req.files;
 
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
+    
+    // Find Banner by ID
+    const achievement = await Achievement.findById(id);
+
+    if (!achievement) {
+      return res.status(404).json({ message: "Achievement not found" });
     }
 
-    const updatedAchievement = await Achievement.findByIdAndUpdate(
-      id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
+    if (files && files.length !== 0) {
+      const publicUrl = await uploadFileToGCS(files[0], "Achievements");
+
+      if (!publicUrl) {
+        return res.status(500).json({ message: "Failed to upload file." });
       }
-    );
+
+      // Lấy tên file từ URL của achievement
+      const fileName = achievement.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+      // Xóa file tương ứng trong Google Cloud Storage
+      await deleteFileFromGCS(fileName);
+
+      updateData.image=publicUrl;
+    }
+
+    // Find achievement by ID and update
+    const updatedAchievement = await Achievement.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true, // Run schema validators
+    });
 
     if (!updatedAchievement) {
-      return res.status(404).json({ error: "Achievement not found." });
+      return res.status(404).json({ message: "Achievement not found" });
     }
 
     res.status(200).json({
-      message: "Achievement updated successfully.",
-      data: updatedAchievement,
+      message: "Created achievements successfully.",
+      data: updatedAchievement
     });
-  } catch (error) {
-    if (error.kind === "ObjectId") {
-      return res.status(400).json({ error: "Invalid achievement ID." });
-    }
-
-    res
-      .status(500)
-      .json({ error: "An error occurred while updating the achievement." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -163,84 +266,160 @@ exports.deleteAchievement = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Achievement by ID and delete
-    const deletedAchievement = await Achievement.findByIdAndDelete(id);
+    // Find achievement by ID
+    const achievement = await Achievement.findById(id);
 
-    if (!deletedAchievement) {
+    if (!achievement) {
       return res.status(404).json({ message: "Achievement not found" });
     }
 
-    res.status(200).json({ message: "Achievement deleted successfully" });
+    // Lấy tên file từ URL của achievement
+    const fileName = achievement.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+    // Xóa file tương ứng trong Google Cloud Storage
+    await deleteFileFromGCS(fileName);
+
+    // Xóa achievement trong cơ sở dữ liệu
+    const deletedAchievement = await Achievement.findByIdAndDelete(id);
+
+    if (!deletedAchievement) {
+      return res.status(404).json({ message: "Have error in delete!" });
+    }
+
+    res.status(200).json({
+      message: "Delete achievements successfully.", 
+      data: deletedAchievement
+    });
   } catch (err) {
+    console.error("Error deleting Achievement:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getUsers = async (req, res) => {
   try {
+    const role = req.query.role || "";
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const users = await User.find()
+
+    // Tính số lượng người dùng có role
+    const totalTeachers = await User.countDocuments({ role: role });
+
+    // Lấy danh sách người dùng với role
+    const users = await User.find({ role: role })
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
-    res.status(200).json(users);
+
+    res.status(200).json({
+      message: "Get users successfully.", 
+      total: totalTeachers, 
+      data: users 
+    });
   } catch (err) {
-    console.error("Error fetching paginated users:", error);
+    console.error("Error fetching paginated users:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createUser = async (req, res) => {
   try {
-    const { name, image, email, password, phone_number, codeforce_name, role } =
-      req.body;
-
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !phone_number ||
-      !codeforce_name ||
-      !role
-    ) {
-      return res.status(400).json({ error: "All fields are required." });
-    }
-
-    const newUser = await User.create({
+    const files = req.files;
+    const {
       name,
       image,
       email,
       password,
+      repassword,
       phone_number,
       codeforce_name,
       role,
-    });
+    } = req.body;
 
-    res.status(201).json({
-      message: "User created successfully.",
-      data: newUser,
-    });
-  } catch (error) {
-    console.error("Error creating user:", error);
+    // Validation
+    // try {
+    //   const validationNameCodeforce = await validNameCodeforce(
+    //     codeforce_name
+    //   );
+    //   if (!validationNameCodeforce) {
+    //     return res
+    //       .status(400)
+    //       .json({ error: "Tên codeforce của bạn không tồn tại." });
+    //   }
+    // } catch (error) {
+    //   return res.status(500).json({ error: "Lỗi khi kiểm tra Codeforce Name." });
+    // }
 
-    if (error.code === 11000 && error.keyValue.email) {
-      return res.status(400).json({ error: "Email is already registered." });
+    const validationUser = await validUser(email);
+    if (validationUser) {
+      return res.status(400).json({ error: "Email đã tồn tại." });
+    }
+    if (password !== repassword) {
+      return res.status(400).json({ error: "Mật khẩu không trùng khớp." });
     }
 
-    res
-      .status(500)
-      .json({ error: "An error occurred while creating the user." });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded!" });
+    }
+
+    // Upload multiple files to Google Cloud Storage
+    const publicUrl = await uploadFileToGCS(files[0], "Users");
+
+    if (!publicUrl) {
+      return res.status(500).json({ message: "Failed to upload files." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      name,
+      image,
+      email,
+      password: hashedPassword,
+      phone_number,
+      codeforce_name,
+      role,
+      image: publicUrl
+    });
+    await newUser.save();
+
+    res.status(201).json({
+      message: "Create users successfully.", 
+      data: newUser,
+    });
+  } catch (err) {
+    res.status(400).json({
+      error: err.message,
+    });
   }
 };
 
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = req.body || {};
+    const files = req.files;
 
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (files && files.length !== 0) {
+      const publicUrl = await uploadFileToGCS(files[0], "Users");
+
+      if (!publicUrl) {
+        return res.status(500).json({ message: "Failed to upload file." });
+      }
+
+      // Lấy tên file từ URL của achievement
+      const fileName = user.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+      // Xóa file tương ứng trong Google Cloud Storage
+      await deleteFileFromGCS(fileName);
+
+      updateData.image=publicUrl;
     }
 
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
@@ -256,16 +435,16 @@ exports.updateUser = async (req, res) => {
       message: "User updated successfully.",
       data: updatedUser,
     });
-  } catch (error) {
-    console.error("Error updating user:", error);
+  } catch (err) {
+    console.error("Error updating user:", err);
 
-    if (error.kind === "ObjectId") {
-      return res.status(400).json({ error: "Invalid user ID." });
+    if (err.kind === "ObjectId") {
+      return res.status(400).json({ err: "Invalid user ID." });
     }
 
     res
       .status(500)
-      .json({ error: "An error occurred while updating the user." });
+      .json({ err: "An error occurred while updating the user." });
   }
 };
 
@@ -274,10 +453,25 @@ exports.deleteUser = async (req, res) => {
     const { id } = req.params;
 
     // Find User by ID and delete
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const fileName = user.image.split('https://storage.googleapis.com/acp_website/').pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
+
+    // Xóa file tương ứng trong Google Cloud Storage
+    await deleteFileFromGCS(fileName);
+
+    // Xóa user trong cơ sở dữ liệu
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ 
+        message: "User not found",
+        data: deletedUser 
+      });
     }
 
     res.status(200).json({ message: "User deleted successfully" });
