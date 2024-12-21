@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 // Định nghĩa schema
 const AchievementSchema = new mongoose.Schema({
-  id_user: {
+  email_user: {
     type: String,
     required: true,
   },
@@ -11,6 +11,10 @@ const AchievementSchema = new mongoose.Schema({
     required: true,
   },
   competition: {
+    type: String,
+    required: true,
+  },
+  image: {
     type: String,
     required: true,
   },

@@ -1,4 +1,5 @@
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
 const adminController = require("../controllers/controllers.admin");
 const {
@@ -29,18 +30,26 @@ router.use(authenticateToken);
 router.use(authorizeRole(["ADMIN"]));
 
 router.get("/banners", adminController.getBanners);
-router.post("/banner", adminController.createBanner);
-router.put("/banner/:id", adminController.updateBanner);
+router.post("/banner", upload.array("files"), adminController.createBanner);
+router.put("/banner/:id", upload.array("files"), adminController.updateBanner);
 router.delete("/banner/:id", adminController.deleteBanner);
 
 router.get("/achievements", adminController.getAchievements);
-router.post("/achievement", adminController.createAchievement);
-router.put("/achievement/:id", adminController.updateAchievement);
+router.post(
+  "/achievement",
+  upload.array("files"),
+  adminController.createAchievement
+);
+router.put(
+  "/achievement/:id",
+  upload.array("files"),
+  adminController.updateAchievement
+);
 router.delete("/achievement/:id", adminController.deleteAchievement);
 
 router.get("/users", adminController.getUsers);
-router.post("/user", adminController.createUser);
-router.put("/user/:id", adminController.updateUser);
+router.post("/user", upload.array("files"), adminController.createUser);
+router.put("/user/:id", upload.array("files"), adminController.updateUser);
 router.delete("/user/:id", adminController.deleteUser);
 
 router.get("/courses", adminController.getCourses);
