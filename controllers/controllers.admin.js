@@ -25,13 +25,6 @@ const {
 const { validNameCodeforce, validUser } = require("../helpers/validations");
 const bcrypt = require("bcrypt");
 
-const {
-  uploadFileToGCS,
-  uploadMultipleFilesToGCS,
-  listFilesFromGCS,
-  deleteFileFromGCS,
-} = require("../helpers/googleCloudStorage");
-
 exports.getBanners = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)

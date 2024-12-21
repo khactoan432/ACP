@@ -7,7 +7,6 @@ const {
   authorizeRole,
 } = require("../middlewares/authMiddleware");
 
-const multer = require("multer");
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
