@@ -66,10 +66,13 @@ router.delete("/topic/:id", adminController.deleteTopic);
 
 router.get("/lessons", adminController.getLessons);
 router.post("/lesson", uploadFields, adminController.createLesson);
-router.put("/lesson/:id", adminController.updateLesson);
+router.put("/lesson/:id", uploadFields, adminController.updateLesson);
 router.delete("/lesson/:id", adminController.deleteLesson);
 
+// router.get("/exercise", adminController.getExercise);
 router.post("/exercise", adminController.createExercise);
+router.put("/exercise/:id", adminController.updateExercise);
+router.delete("/exercise/:id", adminController.deleteExercise);
 
 router.get("/registers", adminController.getRegisters);
 router.post("/register", adminController.createRegister);

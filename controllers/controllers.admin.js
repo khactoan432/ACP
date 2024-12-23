@@ -590,8 +590,11 @@ exports.updateCourse = async (req, res) => {
     let fileVideo = "";
     let video = "";
     if (req.files["fileVideo"]) {
-      fileVideo = req.files["fileImage"];
-      image = await uploadMultipleFilesToGCS(fileImage);
+      // fileVideo = req.files["fileImage"];
+      // if test image when internet low
+      fileVideo = req.files["fileVideo"];
+
+      video = await uploadMultipleFilesToGCS(fileVideo);
     } else {
       video = req.body.video;
     }
@@ -729,7 +732,7 @@ exports.getCourseDetail = async (req, res) => {
           .filter((l) => l.id_topic === t._id.toString())
           .map((l) => ({
             ...l,
-            exercises: allExercises.filter(
+            exercise: allExercises.filter(
               (e) => e.id_lesson === l._id.toString()
             ),
           }));
@@ -797,7 +800,9 @@ exports.createTopic = async (req, res) => {
 exports.updateTopic = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("id param: ", id);
     const updateData = req.body;
+    console.log("updateData: ", updateData);
 
     if (!Object.keys(updateData).length) {
       return res.status(400).json({ error: "No data provided for update." });
@@ -829,16 +834,27 @@ exports.updateTopic = async (req, res) => {
 
 exports.deleteTopic = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // id: id_topic
 
-    // Find Topic by ID and delete
-    const deletedTopic = await Topic.findByIdAndDelete(id);
+    const lessonIds = await Lesson.find({ id_topic: { $in: id } });
+    const lessonIdsArray = lessonIds.map((lesson) => lesson._id);
 
-    if (!deletedTopic) {
+    await Exercise.deleteMany({ id_lesson: { $in: lessonIdsArray } });
+    await Lesson.deleteMany({ id_topic: { $in: id } });
+
+    const deleteTopic = await Topic.findByIdAndDelete(id);
+
+    if (!deleteTopic) {
       return res.status(404).json({ message: "Topic not found" });
     }
 
-    res.status(200).json({ message: "Topic deleted successfully" });
+    // Xóa khóa Topic trong Course
+    await Course.updateMany({ topicIds: id }, { $pull: { topicIds: id } });
+
+    res.status(200).json({
+      message:
+        "Topic, lesson of topic and exercise of lesson deleted successfully",
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -862,23 +878,20 @@ exports.getLessons = async (req, res) => {
 exports.createLesson = async (req, res) => {
   try {
     const { id_topic, name, status } = req.body;
-    const fileImage = req.files["fileImage"];
-    // const fileVideo = req.files["fileVideo"];
+    // const file = req.files["fileImage"];
+    // cmt for tes internet low
+    const file = req.files["fileVideo"];
 
     if (!id_topic || !name || !status) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const uploadedFileImageUrls = await uploadMultipleFilesToGCS(fileImage);
-    let uploadedFilesVideoUrls = "";
-    // if (fileVideo) {
-    //   uploadedFilesVideoUrls = await uploadMultipleFilesToGCS(fileVideo);
-    // }
+    const uploadedFile = await uploadMultipleFilesToGCS(file);
 
     const newLesson = await Lesson.create({
       id_topic,
       name,
-      video: uploadedFileImageUrls[0],
+      video: uploadedFile[0],
       status,
     });
     await Topic.findByIdAndUpdate(
@@ -903,24 +916,91 @@ exports.createLesson = async (req, res) => {
 exports.updateLesson = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    let file = "";
+    let video = "";
+    // if internet low : req.files["fileImage"] else req.files["fileVideo"]
+    if (req.files["fileVideo"]) {
+      file = req.files["fileVideo"];
 
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
+      const arrVideo = await uploadMultipleFilesToGCS(file);
+      video = arrVideo[0];
+    } else {
+      video = req.body.video;
     }
 
-    const updatedLesson = await Lesson.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    console.log("video link :", video);
+    let { name, exercises } = req.body;
+    if (!name | !video) {
+      return res
+        .status(400)
+        .json({ error: "No data provided for update.Missing data" });
+    }
+    // update lesson
+    const updatedLesson = await Lesson.findByIdAndUpdate(
+      id,
+      {
+        name,
+        video: video,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    let allExercises = [];
+    exercises = JSON.parse(exercises);
+
+    if (exercises && Array.isArray(exercises)) {
+      for (let exercise of exercises) {
+        // Sử dụng for...of thay vì forEach
+        if (exercise._id !== "") {
+          const idExercise = exercise._id;
+          const name = exercise.name;
+          const link = exercise.link;
+          const exerciseUpdated = await Exercise.findByIdAndUpdate(
+            idExercise,
+            {
+              name,
+              link,
+            },
+            {
+              new: true,
+              runValidators: true,
+            }
+          );
+          allExercises.push(exerciseUpdated);
+        } else {
+          const name = exercise.name;
+          const link = exercise.link;
+
+          const newExercise = await Exercise.create({
+            id_lesson: id,
+            name,
+            link,
+          });
+          allExercises.push(newExercise);
+
+          await Lesson.findByIdAndUpdate(
+            id,
+            { $push: { exerciseIds: newExercise._id } },
+            { new: true }
+          );
+        }
+      }
+    } else {
+      console.error("exercises is not an array");
+    }
 
     if (!updatedLesson) {
       return res.status(404).json({ error: "Lesson not found." });
     }
+    if (!allExercises) {
+      return res.status(404).json({ error: "Exercise not found." });
+    }
 
     res.status(200).json({
       message: "Lesson updated successfully.",
-      data: updatedLesson,
+      data: { lesson: updatedLesson, exercise: allExercises },
     });
   } catch (error) {
     if (error.kind === "ObjectId") {
@@ -944,8 +1024,12 @@ exports.deleteLesson = async (req, res) => {
     if (!deletedLesson) {
       return res.status(404).json({ message: "Lesson not found" });
     }
+    // Xóa khóa lesson trong Topic
+    await Topic.updateMany({ lessonIds: id }, { $pull: { lessonIds: id } });
 
-    res.status(200).json({ message: "Lesson deleted successfully" });
+    res
+      .status(200)
+      .json({ message: "Lesson, exercises of lesson deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -958,7 +1042,6 @@ exports.createExercise = async (req, res) => {
     if (!id_lesson) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    console.log("dataExercise: ", dataExercise);
     let dataLink = [];
     if (dataExercise.length > 0) {
       for (let i = 0; i < dataExercise.length; i++) {
@@ -985,6 +1068,69 @@ exports.createExercise = async (req, res) => {
     res
       .status(500)
       .json({ error: "An error occurred while creating the lesson." });
+  }
+};
+
+exports.updateExercise = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { updateData } = req.body; // link, name
+
+    if (!id) {
+      return res.status(400).json({ error: "ID fields are required." });
+    }
+
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No data provided for update." });
+    }
+
+    const updatedExercise = await Exercise.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedExercise) {
+      return res.status(404).json({ error: "Exam not found." });
+    }
+
+    res.status(200).json({
+      message: "Exam updated successfully.",
+      data: updatedExercise,
+    });
+
+    res.status(201).json({
+      message: "Lesson created successfully.",
+      data: dataLink,
+    });
+  } catch (error) {
+    console.error("Error creating lesson:", error);
+
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the lesson." });
+  }
+};
+
+exports.deleteExercise = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find Lesson by ID and delete
+    const deletedExercise = await Exercise.findByIdAndDelete(id);
+
+    if (!deletedExercise) {
+      return res.status(404).json({ message: "Exercise not found" });
+    }
+
+    // Xóa khóa Exercise trong Lesson
+    await Lesson.updateMany(
+      { exerciseIds: id },
+      { $pull: { exerciseIds: id } }
+    );
+
+    res.status(200).json({ message: "Exercise deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -1171,6 +1317,11 @@ exports.deleteOverview = async (req, res) => {
     if (!deletedOverview) {
       return res.status(404).json({ message: "Overview not found" });
     }
+    // Xóa khóa overviews trong describe
+    await Describe.updateMany(
+      { overviewIds: id },
+      { $pull: { overviewIds: id } }
+    );
 
     res.status(200).json({ message: "Overview deleted successfully" });
   } catch (err) {
@@ -1270,6 +1421,12 @@ exports.deleteDescribe = async (req, res) => {
     if (!deletedDescribe) {
       return res.status(404).json({ message: "Describe not found" });
     }
+
+    // Xóa khóa describe trong Course
+    await Course.updateMany(
+      { describeIds: id },
+      { $pull: { describeIds: id } }
+    );
 
     res.status(200).json({ message: "Describe deleted successfully" });
   } catch (err) {
