@@ -1,107 +1,100 @@
 const { createPayment, verifyMomoSignature } = require('../payment/momo');
 const { createPaymentUrl, verifyVnpaySignature } = require('../payment/vnpay');
-const axios = require('axios');
+const { Order } = require("../models");
+const mongoose = require('mongoose');
 
-// Khởi tạo thanh toán MoMo
+// Create MoMo payment
 const createMoMoPayment = async (req, res) => {
-    //https://developers.momo.vn/#/docs/en/aiov2/?id=payment-method
-    //parameters
-    var accessKey = 'F8BBA842ECF85';
-    var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-    var orderInfo = 'pay with MoMo';
-    var partnerCode = 'MOMO';
-    var redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
-    var ipnUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
-    var requestType = "payWithMethod";
-    var amount = '50000';
-    var orderId = partnerCode + new Date().getTime();
-    var requestId = orderId;
-    var extraData ='';
-    var orderGroupId ='';
-    var autoCapture =true;
-    var lang = 'vi';
+    const { id_user, id_material, type } = req.body;
 
-    //before sign HMAC SHA256 with format
-    //accessKey=$accessKey&amount=$amount&extraData=$extraData&ipnUrl=$ipnUrl&orderId=$orderId&orderInfo=$orderInfo&partnerCode=$partnerCode&redirectUrl=$redirectUrl&requestId=$requestId&requestType=$requestType
-    var rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType;
-    //puts raw signature
-    console.log("--------------------RAW SIGNATURE----------------")
-    console.log(rawSignature)
-    //signature
-    const crypto = require('crypto');
-    var signature = crypto.createHmac('sha256', secretKey)
-        .update(rawSignature)
-        .digest('hex');
-    console.log("--------------------SIGNATURE----------------")
-    console.log(signature)
-
-    //json object send to MoMo endpoint
-    const requestBody = JSON.stringify({
-        partnerCode : partnerCode,
-        partnerName : "Test",
-        storeId : "MomoTestStore",
-        requestId : requestId,
-        amount : amount,
-        orderId : orderId,
-        orderInfo : orderInfo,
-        redirectUrl : redirectUrl,
-        ipnUrl : ipnUrl,
-        lang : lang,
-        requestType: requestType,
-        autoCapture: autoCapture,
-        extraData : extraData,
-        orderGroupId: orderGroupId,
-        signature : signature
-    });
-
-    //Create the HTTPS objects
-    const options = {
-        method: 'POST',
-        url: "https://test-payment.momo.vn/v2/gateway/api/create",
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(requestBody)
-        },
-        data: requestBody,
+    if (!id_user || !id_material || !type) {
+        return res.status(400).json({ message: 'Missing required information.' });
     }
 
-    let result; 
     try {
-        result = await axios(options);
+        const paymentResult = await createPayment({
+            amount: 50000,
+            orderInfo: 'Pay with MoMo',
+        });
 
-        return res.status(200).json(result.data)
+        if (paymentResult.success && paymentResult.data.resultCode === 0) {
+            const { orderId } = paymentResult;
+
+            const order = await Order.create({
+                code: orderId,
+                id_user,
+                id_material,
+                type,
+                payment_status: 'pending',
+            });
+
+            return res.status(200).json({ message: 'Payment created successfully.', data: paymentResult.data });
+        }
+
+        return res.status(400).json({ message: 'Payment failed.', error: paymentResult.error });
     } catch (error) {
         console.error('Error creating MoMo payment:', error);
-        res.status(500).json({ message: 'Có lỗi xảy ra', error });
+        return res.status(500).json({ message: 'Server error while creating payment.', error: error.message });
     }
 };
 
-// Xử lý kết quả thanh toán (Redirect URL)
+// Handle MoMo return URL
 const momoReturn = (req, res) => {
-    const query = req.query;
+    try {
+        const { signature, ...data } = req.query;
 
-    if (query.resultCode === '0') {
-        res.status(200).json({ message: 'Thanh toán thành công!', query });
-    } else {
-        res.status(400).json({ message: 'Thanh toán thất bại!', query });
+        if (!verifyMomoSignature(data, signature)) {
+            return res.redirect(`http://localhost:3000?status=invalid_signature`);
+        }
+
+        if (Number(data.resultCode) === 0) {
+            return res.redirect(`http://localhost:3000?status=success`);
+        }
+
+        return res.redirect(`http://localhost:3000?status=failure`);
+    } catch (error) {
+        console.error('Error processing MoMo return:', error);
+        return res.redirect(`http://localhost:3000?status=error`);
     }
 };
 
-// Xử lý thông báo từ MoMo (IPN)
-const momoIPN = (req, res) => {
-    const { signature, ...data } = req.body;
+// Handle MoMo IPN
+const momoIPN = async (req, res) => {
+    try {
+        const { signature, ...data } = req.body;
 
-    if (verifyMomoSignature(data, signature)) {
-        if (data.resultCode === 0) {
-            console.log('Giao dịch thành công:', data);
-            res.status(200).send('success');
-        } else {
-            console.log('Giao dịch thất bại:', data);
-            res.status(400).send('failure');
+        if (!verifyMomoSignature(data, signature)) {
+            const order = await Order.findOneAndUpdate(
+                { code: data.orderId },
+                { payment_status: 'paid', method: data.payType },
+                { new: true, runValidators: true }
+            );
+            if (!order) {
+                return res.status(404).json({ message: 'Order not found!' });
+            }
+            console.log({ message: 'Invalid signature!' });
+            return res.status(400).json({ message: 'Invalid signature!' });
         }
-    } else {
-        console.error('Chữ ký không hợp lệ:', data);
-        res.status(400).send('invalid signature');
+
+        if (Number(data.resultCode) === 0) {
+            const order = await Order.findOneAndUpdate(
+                { code: data.orderId },
+                { payment_status: 'paid', method: data.payType },
+                { new: true, runValidators: true }
+            );
+
+            if (!order) {
+                return res.status(404).json({ message: 'Order not found!' });
+            }
+
+            console.log({ message: 'Payment successfully!' });
+            return res.status(200).json({ message: 'Payment successfully!' });
+        }
+
+        return res.status(400).json({ message: 'Payment failed!' });
+    } catch (error) {
+        console.error('Error processing MoMo IPN:', error);
+        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 };
 

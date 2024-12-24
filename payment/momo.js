@@ -6,56 +6,66 @@ const momoConfig = {
     accessKey: process.env.ACCESS_KEY,
     secretKey: process.env.SECRET_KEY,
     endpoint: 'https://test-payment.momo.vn/v2/gateway/api/create',
-    redirectUrl: process.env.CLIENT_URL,
+    redirectUrl: process.env.SERVER_URL + "/api/payment/momo-return",
     ipnUrl: process.env.SERVER_URL + '/api/payment/momo-ipn',
 };
 
-// Hàm tạo URL thanh toán MoMo
+// Create MoMo payment URL
 const createPayment = async ({ amount, orderInfo }) => {
-  const orderId = momoConfig.partnerCode + new Date().getTime();
-  const requestId = `${new Date().getTime()}`;
+    const { accessKey, secretKey, partnerCode, redirectUrl, ipnUrl } = momoConfig;
 
-  const rawSignature = `accessKey=${momoConfig.accessKey}&amount=${amount}&extraData=&ipnUrl=${momoConfig.ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${momoConfig.partnerCode}&redirectUrl=${momoConfig.redirectUrl}&requestId=${requestId}&requestType=captureWallet`;
+    const requestType = 'payWithMethod';
+    const orderId = `${partnerCode}${Date.now()}`;
+    const requestId = orderId;
+    const extraData = '';
 
-  const signature = crypto.createHmac('sha256', momoConfig.secretKey).update(rawSignature).digest('hex');
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
-  const requestBody = JSON.stringify({
-      partnerCode: momoConfig.partnerCode,
-      partnerName: "Test",
-      storeId: "MomoTestStore",
-      requestId,
-      amount,
-      orderId,
-      orderInfo,
-      redirectUrl: momoConfig.redirectUrl,
-      ipnUrl: momoConfig.ipnUrl,
-      lang: 'vi',
-      requestType: 'payWithMethod',
-      autoCapture: true,
-      extraData: '',
-      orderGroupId: '',
-      signature,
-  });
+    const signature = crypto
+        .createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
 
-  try {
-      const response = await axios.post(momoConfig.endpoint, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(requestBody)
-        },
-      });
-      return response.data;
-  } catch (error) {
-      throw new Error('Failed to create MoMo payment');
-  }
+    const requestBody = {
+        partnerCode,
+        partnerName: 'Test',
+        storeId: 'MomoTestStore',
+        requestId,
+        amount,
+        orderId,
+        orderInfo,
+        redirectUrl,
+        ipnUrl,
+        requestType,
+        lang: 'vi',
+        autoCapture: true,
+        extraData,
+        signature,
+    };
+
+    try {
+        const response = await axios.post(momoConfig.endpoint, requestBody, {
+            headers: { 'Content-Type': 'application/json' },
+        });
+        return { success: true, data: response.data, orderId };
+    } catch (error) {
+        console.error('Error in createPayment:', error.message);
+        return { success: false, error: error.message };
+    }
 };
 
-// Hàm xác minh chữ ký từ MoMo
+// Verify MoMo signature
 const verifyMomoSignature = (data, signature) => {
-    const { accessKey, amount, extraData, message, orderId, orderInfo, partnerCode, requestId, resultCode } = data;
-    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&message=${message}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&requestId=${requestId}&resultCode=${resultCode}`;
+    const { accessKey, secretKey, redirectUrl, ipnUrl } = momoConfig;
+    const { amount, extraData, orderId, orderInfo, partnerCode, requestId } = data;
 
-    const computedSignature = crypto.createHmac('sha256', momoConfig.secretKey).update(rawSignature).digest('hex');
+    const rawSignature = `accessKey=${accessKey}&amount=${Number(amount)}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=payWithMethod`;
+
+    const computedSignature = crypto
+        .createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
+    console.log(computedSignature, signature);
     return computedSignature === signature;
 };
 

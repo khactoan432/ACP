@@ -1,7 +1,8 @@
 require("dotenv").config();
 const fileUpload = require("express-fileupload");
 const express = require("express");
-const session = require("express-session");
+const redis = require('redis')
+const session = require('express-session')
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
@@ -19,8 +20,13 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+
+let RedisStore = require('connect-redis')(session)
+let redisClient = redis.createClient()
+
 app.use(
   session({
+    store: new RedisStore({ client: redisClient }),
     secret: "toantriACP", // Khóa bí mật để mã hóa session
     resave: false, // Không lưu lại session nếu không thay đổi
     saveUninitialized: false, // Không tạo session mới nếu không cần
@@ -41,7 +47,7 @@ app.use(errorMiddleware);
 require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "development"}`,
 });
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
   console.log(

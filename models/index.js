@@ -1,17 +1,17 @@
-const Achievement = require("./Achievement");
-const Banner = require("./Banner");
-const Comment = require("./Comment");
-const Course = require("./Course");
-const Describe = require("./Describe");
-const Exam = require("./Exam");
-const Exercise = require("./Exercise");
-const Lesson = require("./Lesson");
-const Order = require("./Order");
-const Overview = require("./Overview");
-const Rate = require("./Rate");
-const Register = require("./Register");
-const Topic = require("./Topic");
-const User = require("./User");
+const Achievement = require("./achievement");
+const Banner = require("./banner");
+const Comment = require("./comment");
+const Course = require("./course");
+const Describe = require("./describe");
+const Exam = require("./exam");
+const Exercise = require("./exercise");
+const Lesson = require("./lesson");
+const Order = require("./order");
+const Overview = require("./overview");
+const Rate = require("./rate");
+const Register = require("./register");
+const Topic = require("./topic");
+const User = require("./user");
 
 module.exports = {
   Achievement,

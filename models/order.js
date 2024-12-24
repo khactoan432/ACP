@@ -10,10 +10,18 @@ const OrderSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  code: {
+    type: String,
+    required: true,
+  },
   type: {
     type: String,
     enum: ["COURSE", "EXAM"],
     required: true,
+  },
+  method: {
+    type: String,
+    required: false,
   },
   payment_status: {
     type: String,

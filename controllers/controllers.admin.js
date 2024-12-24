@@ -23,7 +23,8 @@ const {
 } = require("../helpers/googleCloudStorage");
 
 const { validNameCodeforce, validUser } = require("../helpers/validations");
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
+
 
 exports.getBanners = async (req, res) => {
   try {
