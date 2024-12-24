@@ -23,8 +23,7 @@ const {
 } = require("../helpers/googleCloudStorage");
 
 const { validNameCodeforce, validUser } = require("../helpers/validations");
-const bcrypt = require('bcryptjs');
-
+const bcrypt = require("bcryptjs");
 
 exports.getBanners = async (req, res) => {
   try {
@@ -1060,15 +1059,15 @@ exports.createExercise = async (req, res) => {
       }
     }
     res.status(201).json({
-      message: "Lesson created successfully.",
+      message: "exercise created successfully.",
       data: dataLink,
     });
   } catch (error) {
-    console.error("Error creating lesson:", error);
+    console.error("Error creating exercise:", error);
 
     res
       .status(500)
-      .json({ error: "An error occurred while creating the lesson." });
+      .json({ error: "An error occurred while creating the exercise." });
   }
 };
 
