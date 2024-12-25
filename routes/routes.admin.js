@@ -80,8 +80,8 @@ router.put("/register/:id", adminController.updateRegister);
 router.delete("/register/:id", adminController.deleteRegister);
 
 router.get("/exams", adminController.getExams);
-router.post("/exam", adminController.createExam);
-router.put("/exam/:id", adminController.updateExam);
+router.post("/exam", uploadFields, adminController.createExam);
+router.put("/exam/:id", uploadFields, adminController.updateExam);
 router.delete("/exam/:id", adminController.deleteExam);
 
 router.get("/overviews", adminController.getOverviews);

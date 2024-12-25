@@ -1145,14 +1145,29 @@ exports.getExams = async (req, res) => {
 
 exports.createExam = async (req, res) => {
   try {
-    const { name, link, video } = req.body;
+    const { name, link, price, discount } = req.body;
     const id_user = req.user._id;
 
-    if (!name || !link || !video) {
+    const fileImage = req.files["fileImage"];
+    const fileVideo = req.files["fileVideo"];
+    if (!name || !link || !price || !discount || !fileImage || !fileVideo) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    const newExam = await Exam.create({ id_user, name, link, video });
+    // const newExam = await Exam.create({ id_user, name, link, video });
+
+    const uploadedFileImageUrls = await uploadMultipleFilesToGCS(fileImage);
+    const uploadedFilesVideoUrls = await uploadMultipleFilesToGCS(fileVideo);
+    // xử lý chỉ có 1 video || 1 ảnh
+    const newExam = await Exam.create({
+      id_user,
+      name,
+      link,
+      price,
+      discount,
+      image: uploadedFileImageUrls[0],
+      video: uploadedFilesVideoUrls[0],
+    });
 
     res.status(201).json({
       message: "Exam created successfully.",
@@ -1170,17 +1185,50 @@ exports.createExam = async (req, res) => {
 exports.updateExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
+    let fileImage = "";
+    let image = "";
+    if (req.files["fileImage"]) {
+      fileImage = req.files["fileImage"];
+      image = await uploadMultipleFilesToGCS(fileImage);
+    } else {
+      image = req.body.image;
     }
 
-    const updatedExam = await Exam.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    let fileVideo = "";
+    let video = "";
+    if (req.files["fileVideo"]) {
+      // fileVideo = req.files["fileImage"];
+      // if test image when internet low
+      fileVideo = req.files["fileVideo"];
 
+      video = await uploadMultipleFilesToGCS(fileVideo);
+    } else {
+      video = req.body.video;
+    }
+
+    const { name, link, price, discount } = req.body;
+
+    if (!name || !link || !image || !price || !discount) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    console.log("check here");
+
+    const updatedExam = await Exam.findByIdAndUpdate(
+      id,
+      {
+        name,
+        link,
+        price,
+        discount,
+        image: image,
+        video: video,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
     if (!updatedExam) {
       return res.status(404).json({ error: "Exam not found." });
     }
@@ -1741,3 +1789,24 @@ exports.deleteRate = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// category: {
+//   danh mục: [
+//      {id: uid; value: "Bình dương"}
+//      {id: uid; value:""}
+//   ];
+//   khu vực: [
+//     {id: uid; value: ""}
+//     {id: uid; value:""}
+//   ];
+//   năm: [{id: uid; value: ""}
+//     {id: uid; value:""}];
+//   orther:[
+//     name1: {[]},
+
+//   ];
+// }
+// categories:
+
+// course: {
+//   category: {danh mục: ["value"], khu vực: [], năm: []}
