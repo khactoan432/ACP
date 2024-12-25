@@ -2,9 +2,90 @@ const { Comment, Rate, Course, Topic, Lesson, Exam, Order } = require("../models
 
 exports.getCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
-    res.status(200).json(courses);
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit); // Default: 10 (fetch 10 records)
+
+    const totals = await Course.countDocuments();
+
+    const courses = await Course.find()
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+    res.status(200).json({
+      message: "Get courses successfully.",
+      total: totals,
+      data: courses,
+    });
   } catch (err) {
+    console.error("Error fetching paginated courses:", error);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getCourseDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const structCourse = {};
+
+    // Lấy thông tin khóa học
+    const course = await Course.findById(id).lean();
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    structCourse.course = JSON.parse(JSON.stringify(course));
+
+    const describesData = await Describe.find({ id_material: id }).lean();
+    let describes = JSON.parse(JSON.stringify(describesData)); // copy deep dataDescription
+
+    if (describes.length > 0) {
+      const describeIds = describes.map((d) => d._id.toString());
+      const allOverviews = await Overview.find({
+        id_material: { $in: describeIds },
+      }).lean();
+
+      describes.forEach((d) => {
+        d.overviews = allOverviews.filter(
+          (o) => o.id_material.toString() === d._id.toString()
+        );
+      });
+    }
+
+    const topicsData = await Topic.find({ id_course: id }).lean();
+    let topics = JSON.parse(JSON.stringify(topicsData));
+
+    if (topics.length > 0) {
+      const topicIds = topics.map((t) => t._id.toString());
+
+      const allLessons = await Lesson.find({
+        id_topic: { $in: topicIds },
+      }).lean();
+
+      const lessonIds = allLessons.map((l) => l._id.toString());
+      const allExercises = await Exercise.find({
+        id_lesson: { $in: lessonIds },
+      }).lean();
+
+      topics.forEach((t) => {
+        t.lessons = allLessons
+          .filter((l) => l.id_topic === t._id.toString())
+          .map((l) => ({
+            ...l,
+            exercise: allExercises.filter(
+              (e) => e.id_lesson === l._id.toString()
+            ),
+          }));
+      });
+    }
+
+    structCourse.course.describes = describes;
+    structCourse.course.topics = topics;
+
+    res.status(200).json({
+      data: structCourse,
+      message: "Get course detail successfully!",
+    });
+  } catch (err) {
+    console.error(err.message);
     res.status(500).json({ error: err.message });
   }
 };

@@ -330,7 +330,7 @@ exports.deleteAchievement = async (req, res) => {
 exports.getUsers = async (req, res) => {
   try {
     const role = req.query.role || "";
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
     const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
 
     // Tính số lượng người dùng có role
@@ -339,7 +339,7 @@ exports.getUsers = async (req, res) => {
     // Lấy danh sách người dùng với role
     const users = await User.find({ role: role })
       .sort({ createdAt: 1 })
-      .skip(skip)
+      .skip((page - 1) * limit)
       .limit(limit);
 
     res.status(200).json({
@@ -578,22 +578,18 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    let fileImage = "";
+
     let image = "";
-    if (req.files["fileImage"]) {
-      fileImage = req.files["fileImage"];
+    if (req.files && req.files["fileImage"]) {
+      const fileImage = req.files["fileImage"];
       image = await uploadMultipleFilesToGCS(fileImage);
     } else {
       image = req.body.image;
     }
 
-    let fileVideo = "";
     let video = "";
-    if (req.files["fileVideo"]) {
-      // fileVideo = req.files["fileImage"];
-      // if test image when internet low
-      fileVideo = req.files["fileVideo"];
-
+    if (req.files && req.files["fileVideo"]) {
+      const fileVideo = req.files["fileVideo"];
       video = await uploadMultipleFilesToGCS(fileVideo);
     } else {
       video = req.body.video;
@@ -601,26 +597,24 @@ exports.updateCourse = async (req, res) => {
 
     const { name, price, discount } = req.body;
 
-    if (!name || !image || !price || !discount) {
-      return res.status(400).json({ error: "All fields are required." });
+    // Tạo một object chỉ chứa các trường có giá trị
+    const updateFields = {};
+    if (name) updateFields.name = name;
+    if (price) updateFields.price = price;
+    if (discount) updateFields.discount = discount;
+    if (image) updateFields.image = Array.isArray(image) ? image[0] : image;
+    if (video) updateFields.video = Array.isArray(video) ? video[0] : video;
+
+    // Kiểm tra xem có trường nào để cập nhật không
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ error: "No fields to update." });
     }
 
-    console.log("check here");
+    const updatedCourse = await Course.findByIdAndUpdate(id, updateFields, {
+      new: true, // Trả về document sau khi cập nhật
+      runValidators: true, // Kiểm tra validation
+    });
 
-    const updatedCourse = await Course.findByIdAndUpdate(
-      id,
-      {
-        name,
-        price,
-        discount,
-        image: image,
-        video: video,
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
     if (!updatedCourse) {
       return res.status(404).json({ error: "Course not found." });
     }
@@ -630,10 +624,10 @@ exports.updateCourse = async (req, res) => {
       data: updatedCourse,
     });
   } catch (error) {
+    console.error(error);
     if (error.kind === "ObjectId") {
       return res.status(400).json({ error: "Invalid course ID." });
     }
-
     res
       .status(500)
       .json({ error: "An error occurred while updating the course." });

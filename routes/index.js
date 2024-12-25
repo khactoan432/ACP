@@ -25,6 +25,7 @@ router.get("/banners", indexController.getBanners);
 router.get("/users", indexController.getUsers);
 router.get("/achievements", indexController.getAchievements);
 router.get("/courses", indexController.getCourses);
+router.get("/course/:id", indexController.getCourseDetail);
 router.get("/topics", indexController.getTopics);
 router.get("/lessons", indexController.getLessons);
 router.get("/exams", indexController.getExams);

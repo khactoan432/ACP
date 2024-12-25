@@ -10,6 +10,7 @@ router.use(authenticateToken);
 router.use(authorizeRole(["USER", "ADMIN", "TEACHER"]));
 
 router.get("/courses", userController.getCourses);
+router.get("/course-detail/:id", userController.getCourseDetail);
 router.get("/exams", userController.getExams);
 
 router.get("/order-course", userController.getOrderCourse);
