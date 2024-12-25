@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
 const jwt = require("jsonwebtoken");
 const { User } = require("../models");
@@ -99,6 +99,11 @@ class AuthController {
       return res.status(200).json({
         message: "Đăng nhập thành công",
         user: {
+          _id: user._id,
+          name: user.name,
+          image: user.image,
+          email: user.email,
+          phone_number: user.phone_number,
           name: user.name,
           image: user.image,
           email: user.email,
