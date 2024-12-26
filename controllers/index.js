@@ -200,9 +200,22 @@ exports.getLessons = async (req, res) => {
 
 exports.getExams = async (req, res) => {
   try {
-    const exams = await Exam.find();
-    res.status(200).json(exams);
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit); // Default: 10 (fetch 10 records)
+
+    const totals = await Exam.countDocuments();
+
+    const exams = await Exam.find()
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+    res.status(200).json({
+      message: "Get Exams successfully.",
+      total: totals,
+      data: exams,
+    });
   } catch (err) {
+    console.error("Error fetching paginated exams:", error);
     res.status(500).json({ error: err.message });
   }
 };
