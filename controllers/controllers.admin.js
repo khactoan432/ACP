@@ -8,6 +8,7 @@ const {
   Topic,
   Lesson,
   Exam,
+  ExamVideo,
   Overview,
   Order,
   Describe,
@@ -24,6 +25,8 @@ const {
 
 const { validNameCodeforce, validUser } = require("../helpers/validations");
 const bcrypt = require("bcryptjs");
+const CategoryType = require("../models/categoryType");
+const Category = require("../models/category");
 
 exports.getBanners = async (req, res) => {
   try {
@@ -1266,6 +1269,97 @@ exports.deleteExam = async (req, res) => {
   }
 };
 
+exports.getExamVideos = async (req, res) => {
+  try {
+    const allVideo = await ExamVideo.find().lean();
+
+    if (allVideo.length > 0) {
+      res.status(200).json({
+        message: "Get all video successfully",
+        data: allVideo,
+      });
+    } else {
+      res.status(200).json({
+        message: "No video found",
+        data: [],
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+exports.createExamVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { describe } = req.body;
+    console.log("id: ", id);
+    console.log("describe: ", describe);
+    let video = "";
+    const videoFile = req.files["fileVideo"];
+    if (videoFile) {
+      video = await uploadMultipleFilesToGCS(videoFile);
+    }
+    if (!video) {
+      return res.status(400).json({ error: "Video is required" });
+    }
+    console.log("video: ", video);
+    console.log("description: ", describe);
+    const newExamVideo = await ExamVideo.create({
+      id_exam: id,
+      describe,
+      video: video[0],
+    });
+
+    await Exam.findByIdAndUpdate(
+      id,
+      { $push: { examVideoIds: newExamVideo._id } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Create video successfully",
+      data: newExamVideo,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateExamVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { describe, video } = req.body;
+    const videoFile = req.files["fileVideo"];
+    if (videoFile) {
+      video = await uploadMultipleFilesToGCS(videoFile);
+    }
+    const updateVideoExam = await ExamVideo.findByIdAndUpdate(
+      id,
+      { describe, video },
+      { new: true, runValidators: true }
+    );
+    res.status(200).json({
+      message: "Update video successfully",
+      data: updateVideoExam,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteExamVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteVideoExam = await ExamVideo.findByIdAndDelete(id);
+    if (!deleteVideoExam) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    res.status(200).json({ message: "Video deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.getOverviews = async (req, res) => {
   try {
     const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
@@ -1789,24 +1883,243 @@ exports.deleteRate = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// category
 
-// category: {
-//   danh mục: [
-//      {id: uid; value: "Bình dương"}
-//      {id: uid; value:""}
-//   ];
-//   khu vực: [
-//     {id: uid; value: ""}
-//     {id: uid; value:""}
-//   ];
-//   năm: [{id: uid; value: ""}
-//     {id: uid; value:""}];
-//   orther:[
-//     name1: {[]},
+exports.getCategories = async (req, res) => {
+  try {
+    // Truy vấn tất cả CategoryType và các Category liên quan qua categoryIds
+    const categoryTypes = await CategoryType.find().populate("categoryIds"); // populate đúng tên trường
 
-//   ];
-// }
-// categories:
+    if (!categoryTypes || categoryTypes.length === 0) {
+      return res
+        .status(200)
+        .json({ message: "No CategoryTypes found", data: [] });
+    }
 
-// course: {
-//   category: {danh mục: ["value"], khu vực: [], năm: []}
+    const formattedCategoryTypes = categoryTypes.map((categoryType) => ({
+      ...categoryType.toObject(),
+      value: categoryType.categoryIds, // Đổi tên trường từ categoryIds thành value
+    }));
+
+    return res.status(200).json({
+      message: "CategoryTypes fetched successfully.",
+      data: formattedCategoryTypes,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createCategories = async (req, res) => {
+  try {
+    const { option, type, value } = req.body;
+
+    // Kiểm tra nếu thiếu option, type hoặc value
+    if (!option || !type || !value) {
+      return res
+        .status(400)
+        .json({ message: "Missing required option | type | value" });
+    }
+
+    // Nếu value là một mảng, tạo từng Category cho mỗi giá trị trong value
+    const newCategoryType = await CategoryType.create({
+      option,
+      type,
+      categoryIds: [],
+    });
+
+    const categoryIds = [];
+
+    // Kiểm tra nếu value là mảng, nếu không thì gán thành mảng
+    const values = Array.isArray(value) ? value : [value];
+
+    // Tạo các Category và lưu ID vào categoryIds
+    for (let val of values) {
+      const newCategory = await Category.create({
+        category_type_id: newCategoryType._id,
+        value: val,
+      });
+      categoryIds.push(newCategory._id);
+    }
+
+    // Cập nhật mảng categoryIds trong CategoryType
+    newCategoryType.categoryIds = categoryIds;
+    await newCategoryType.save();
+
+    // Chuyển về đối tượng thuần túy
+    const plainCategoryType = newCategoryType.toObject();
+    const plainCategories = await Category.find({
+      _id: { $in: categoryIds },
+    }).lean();
+
+    return res.status(200).json({
+      message: "Categories created successfully.",
+      data: {
+        ...plainCategoryType,
+        plainCategories,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateCategories = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { option, type, value } = req.body;
+
+    if (!id || (!option && !type && !value)) {
+      return res
+        .status(400)
+        .json({ message: "Missing required id or update fields" });
+    }
+
+    // Tìm CategoryType dựa trên id
+    const categoryType = await CategoryType.findById(id);
+
+    if (!categoryType) {
+      return res.status(404).json({ message: "CategoryType not found" });
+    }
+
+    // Nếu có giá trị 'value', xử lý cập nhật nhiều Category
+    if (value) {
+      const values = Array.isArray(value) ? value : [value];
+      const categoryPromises = values.map(async (val) => {
+        const category = await Category.findOne({
+          category_type_id: categoryType._id,
+          value: val,
+        });
+        if (category) {
+          category.value = val;
+          await category.save();
+          return category._id;
+        } else {
+          const newCategory = await Category.create({
+            category_type_id: categoryType._id,
+            value: val,
+          });
+          return newCategory._id;
+        }
+      });
+
+      const updatedCategoryIds = await Promise.all(categoryPromises);
+      categoryType.categoryIds = [
+        ...categoryType.categoryIds,
+        ...updatedCategoryIds,
+      ];
+      await categoryType.save();
+    }
+
+    // Nếu có thay đổi option hoặc type trong CategoryType, cập nhật
+    if (option || type) {
+      if (option) categoryType.option = option;
+      if (type) categoryType.type = type;
+      await categoryType.save();
+    }
+
+    return res.status(200).json({
+      message: "CategoryType and Categories updated successfully.",
+      data: categoryType.toObject(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { value } = req.body;
+
+    if (!id || !value) {
+      return res
+        .status(400)
+        .json({ message: "Missing required id or update fields" });
+    }
+
+    // Tìm CategoryType dựa trên id
+    const category = await Category.findById(id);
+
+    if (!category) {
+      return res.status(404).json({ message: "CategoryType not found" });
+    }
+
+    category.value = value;
+    category.save();
+
+    return res.status(200).json({
+      message: "Category updated successfully.",
+      data: category.toObject(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params; // ID của Category
+
+    if (!id) {
+      return res.status(400).json({ message: "Missing required category id" });
+    }
+
+    const category = await Category.findById(id);
+
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    await Category.findByIdAndDelete(id);
+
+    await CategoryType.updateMany(
+      { categoryIds: id },
+      { $pull: { categoryIds: id } }
+    );
+
+    return res.status(200).json({
+      message: "Category deleted successfully.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteCategoryType = async (req, res) => {
+  try {
+    const { id } = req.params; // ID của CategoryType
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Missing required category type id" });
+    }
+
+    // Tìm CategoryType và populate các Category liên quan
+    const categoryType = await CategoryType.findById(id).populate(
+      "categoryIds"
+    );
+
+    if (!categoryType) {
+      return res.status(404).json({ message: "CategoryType not found" });
+    }
+
+    // Xóa tất cả các `Category` liên quan
+    const categories = categoryType.categoryIds;
+    if (categories && categories.length > 0) {
+      await Promise.all(
+        categories.map((category) => Category.findByIdAndDelete(category._id))
+      );
+    }
+
+    // Xóa `CategoryType`
+    await CategoryType.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      message: "CategoryType and related categories deleted successfully.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -4,6 +4,7 @@ const Comment = require("./comment");
 const Course = require("./course");
 const Describe = require("./describe");
 const Exam = require("./exam");
+const ExamVideo = require("./examVideo");
 const Exercise = require("./exercise");
 const Lesson = require("./lesson");
 const Order = require("./order");
@@ -20,6 +21,7 @@ module.exports = {
   Course,
   Describe,
   Exam,
+  ExamVideo,
   Exercise,
   Lesson,
   Order,

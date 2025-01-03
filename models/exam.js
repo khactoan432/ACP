@@ -35,6 +35,7 @@ const ExamSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  examVideoIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "ExamVideo" }],
 });
 
 // Tạo model

@@ -84,6 +84,11 @@ router.post("/exam", uploadFields, adminController.createExam);
 router.put("/exam/:id", uploadFields, adminController.updateExam);
 router.delete("/exam/:id", adminController.deleteExam);
 
+router.get("/exam/videos", adminController.getExamVideos);
+router.post("/exam/video/:id", uploadFields, adminController.createExamVideo);
+router.put("/exam/video/:id", uploadFields, adminController.updateExamVideo);
+router.delete("/exam/video/:id", adminController.deleteExamVideo);
+
 router.get("/overviews", adminController.getOverviews);
 router.post("/overview", adminController.createOverview);
 router.put("/overview/:id", adminController.updateOverview);
@@ -105,5 +110,13 @@ router.delete("/comment/:id", adminController.deleteComment);
 router.post("/rate", adminController.createRate);
 router.put("/rate/:id", adminController.updateRate);
 router.delete("/rate/:id", adminController.deleteRate);
+
+// categories
+router.get("/categories", adminController.getCategories);
+router.post("/categories", adminController.createCategories);
+router.put("/categories/:id", adminController.updateCategories);
+router.put("/category/:id", adminController.updateCategory);
+router.delete("/category/:id", adminController.deleteCategory);
+router.delete("/categoryType/:id", adminController.deleteCategoryType);
 
 module.exports = router;
