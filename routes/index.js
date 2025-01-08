@@ -29,6 +29,7 @@ router.get("/course/:id", indexController.getCourseDetail);
 router.get("/topics", indexController.getTopics);
 router.get("/lessons", indexController.getLessons);
 router.get("/exams", indexController.getExams);
+router.get("/exam/:id", indexController.getExamDetail);
 
 module.exports = router;
 
