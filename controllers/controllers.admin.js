@@ -1148,7 +1148,7 @@ exports.getExams = async (req, res) => {
 
 exports.createExam = async (req, res) => {
   try {
-    const { name, link, price, discount } = req.body;
+    const { name, link, price, discount, categories } = req.body;
     const id_user = req.user._id;
 
     const fileImage = req.files["fileImage"];
@@ -1158,6 +1158,8 @@ exports.createExam = async (req, res) => {
     }
 
     // const newExam = await Exam.create({ id_user, name, link, video });
+    const categoriesParser = JSON.parse(categories);
+    console.log("categoriesParser: ", categoriesParser);
 
     const uploadedFileImageUrls = await uploadMultipleFilesToGCS(fileImage);
     const uploadedFilesVideoUrls = await uploadMultipleFilesToGCS(fileVideo);
@@ -1168,6 +1170,7 @@ exports.createExam = async (req, res) => {
       link,
       price,
       discount,
+      categories: categoriesParser,
       image: uploadedFileImageUrls[0],
       video: uploadedFilesVideoUrls[0],
     });
@@ -1209,14 +1212,13 @@ exports.updateExam = async (req, res) => {
       video = req.body.video;
     }
 
-    const { name, link, price, discount } = req.body;
+    const { name, link, price, discount, categories } = req.body;
 
     if (!name || !link || !image || !price || !discount) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    console.log("check here");
-
+    const categoriesParser = JSON.parse(categories);
     const updatedExam = await Exam.findByIdAndUpdate(
       id,
       {
@@ -1224,6 +1226,7 @@ exports.updateExam = async (req, res) => {
         link,
         price,
         discount,
+        categories: categoriesParser,
         image: image,
         video: video,
       },
