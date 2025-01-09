@@ -32,7 +32,7 @@ const ExamSchema = new mongoose.Schema({
     required: true,
   },
   categories: {
-    type: [String],
+    type: [],
     required: false,
   },
   createdAt: {
