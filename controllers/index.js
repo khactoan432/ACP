@@ -1,4 +1,18 @@
-const { Comment, Rate, Banner, Achievement, User, Course, Describe, Overview, Exercise, Topic, Lesson, Exam } = require("../models");
+const {
+  Comment,
+  Rate,
+  Banner,
+  Achievement,
+  User,
+  Course,
+  Describe,
+  Overview,
+  Exercise,
+  Topic,
+  Lesson,
+  Exam,
+  Advisory,
+} = require("../models");
 
 exports.getComments = async (req, res) => {
   try {
@@ -28,12 +42,12 @@ exports.getBanners = async (req, res) => {
 
     const banners = await Banner.find()
       .sort({ createdAt: 1 })
-      .skip((page-1)*limit)
+      .skip((page - 1) * limit)
       .limit(limit);
     res.status(200).json({
       message: "Get banners successfully.",
-      total: totalBanners, 
-      data: banners
+      total: totalBanners,
+      data: banners,
     });
   } catch (err) {
     console.error("Error fetching paginated banners:", err);
@@ -51,12 +65,12 @@ exports.getAchievements = async (req, res) => {
 
     const achievements = await Achievement.find()
       .sort({ createdAt: 1 })
-      .skip((page-1)*limit)
+      .skip((page - 1) * limit)
       .limit(limit);
     res.status(200).json({
       message: "Get achievements successfully.",
-      total: totalAchievements, 
-      data: achievements
+      total: totalAchievements,
+      data: achievements,
     });
   } catch (err) {
     console.error("Error fetching paginated achievements:", err);
@@ -80,9 +94,9 @@ exports.getUsers = async (req, res) => {
       .limit(limit);
 
     res.status(200).json({
-      message: "Get users successfully.", 
-      total: totalTeachers, 
-      data: users 
+      message: "Get users successfully.",
+      total: totalTeachers,
+      data: users,
     });
   } catch (err) {
     console.error("Error fetching paginated users:", err);
@@ -216,6 +230,39 @@ exports.getExams = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching paginated exams:", error);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// advisory user
+
+exports.createAdvisory = async (req, res) => {
+  try {
+    const { name, email, phone_number, mindfulness_course } = req.body;
+    console.log("name: " + name);
+    console.log("email: " + email);
+    console.log("phone_number: " + phone_number);
+    console.log("mindfulness_course: " + mindfulness_course);
+
+    if (!name || !email || !phone_number || !mindfulness_course) {
+      return res.status(400).json({
+        message:
+          "Missing required name | email | phone_number | mindfulness_course ",
+      });
+    }
+
+    const newAdvisory = await Advisory.create({
+      name,
+      email,
+      phone_number,
+      mindfulness_course,
+    });
+
+    return res.status(200).json({
+      message: "Advisory created successfully.",
+      data: newAdvisory,
+    });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };

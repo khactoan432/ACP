@@ -1,4 +1,12 @@
-const { Comment, Rate, Course, Topic, Lesson, Exam, Order } = require("../models");
+const {
+  Comment,
+  Rate,
+  Course,
+  Topic,
+  Lesson,
+  Exam,
+  Order,
+} = require("../models");
 
 exports.getCourses = async (req, res) => {
   try {
@@ -111,7 +119,7 @@ exports.getOrderCourse = async (req, res) => {
 exports.createOrderCourse = async (req, res) => {
   try {
     const { id_user, id_material, type } = req.body;
-    const newOrder = new Order({ id_user, id_material, type});
+    const newOrder = new Order({ id_user, id_material, type });
     await newOrder.save();
     res.status(201).json(newOrder);
   } catch (err) {
@@ -131,7 +139,7 @@ exports.getOrderExam = async (req, res) => {
 exports.createOrderExam = async (req, res) => {
   try {
     const { id_user, id_material, type } = req.body;
-    const newOrder = new Order({ id_user, id_material, type});
+    const newOrder = new Order({ id_user, id_material, type });
     await newOrder.save();
     res.status(201).json(newOrder);
   } catch (err) {
@@ -152,8 +160,8 @@ exports.createComment = async (req, res) => {
 
 exports.updateComment = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Comment by ID and update
     const updatedComment = await Comment.findByIdAndUpdate(id, updateData, {
@@ -173,7 +181,7 @@ exports.updateComment = async (req, res) => {
 
 exports.deleteComment = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Comment by ID and delete
     const deletedComment = await Comment.findByIdAndDelete(id);
@@ -201,8 +209,8 @@ exports.createRate = async (req, res) => {
 
 exports.updateRate = async (req, res) => {
   try {
-    const { id } = req.params; 
-    const updateData = req.body; 
+    const { id } = req.params;
+    const updateData = req.body;
 
     // Find Rate by ID and update
     const updatedRate = await Rate.findByIdAndUpdate(id, updateData, {
@@ -222,7 +230,7 @@ exports.updateRate = async (req, res) => {
 
 exports.deleteRate = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     // Find Rate by ID and delete
     const deletedRate = await Rate.findByIdAndDelete(id);
@@ -237,18 +245,10 @@ exports.deleteRate = async (req, res) => {
   }
 };
 
-exports.getInfor = async (req, res) => {
+exports.getInfor = async (req, res) => {};
 
-};
+exports.updateInfor = async (req, res) => {};
 
-exports.updateInfor = async (req, res) => {
+exports.getRank = async (req, res) => {};
 
-};
-
-exports.getRank = async (req, res) => {
-
-};
-
-exports.getScore = async (req, res) => {
-
-};
+exports.getScore = async (req, res) => {};

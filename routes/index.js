@@ -30,6 +30,9 @@ router.get("/topics", indexController.getTopics);
 router.get("/lessons", indexController.getLessons);
 router.get("/exams", indexController.getExams);
 
+// advisory user
+router.post("/advisories", indexController.createAdvisory);
+
 module.exports = router;
 
 // Example route

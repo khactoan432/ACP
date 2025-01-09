@@ -13,6 +13,7 @@ const Rate = require("./rate");
 const Register = require("./register");
 const Topic = require("./topic");
 const User = require("./user");
+const Advisory = require("./advisory");
 
 module.exports = {
   Achievement,
@@ -30,4 +31,5 @@ module.exports = {
   Register,
   Topic,
   User,
+  Advisory,
 };
