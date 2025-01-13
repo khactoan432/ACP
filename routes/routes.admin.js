@@ -119,4 +119,9 @@ router.put("/category/:id", adminController.updateCategory);
 router.delete("/category/:id", adminController.deleteCategory);
 router.delete("/categoryType/:id", adminController.deleteCategoryType);
 
+// advisory
+
+router.get("/advisories", adminController.getAdvisories);
+router.delete("/advisories/:id", adminController.deleteAdvisories);
+
 module.exports = router;

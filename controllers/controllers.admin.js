@@ -14,6 +14,7 @@ const {
   Describe,
   Register,
   Exercise,
+  Advisory,
 } = require("../models");
 
 const {
@@ -1476,7 +1477,26 @@ exports.getDescribes = async (req, res) => {
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
-    res.status(200).json(describes);
+
+    // Duyệt qua từng "describe" để lấy danh sách các "Overview" theo "overviewIds"
+    const overviewPromises = describes.map(async (describe) => {
+      const overviews = await Overview.find({
+        _id: { $in: describe.overviewIds }, // Truy vấn Overview với mảng _id nằm trong overviewIds
+      });
+
+      return {
+        ...describe.toObject(),
+        overviews, // Thêm thông tin overviews vào mỗi describe
+      };
+    });
+
+    // Đợi tất cả các truy vấn Overview hoàn thành
+    const describesWithOverviews = await Promise.all(overviewPromises);
+
+    res.status(200).json({
+      message: "Describes fetched successfully",
+      data: describesWithOverviews,
+    });
   } catch (err) {
     console.error("Error fetching paginated describes:", error);
     res.status(500).json({ error: err.message });
@@ -2121,6 +2141,47 @@ exports.deleteCategoryType = async (req, res) => {
 
     return res.status(200).json({
       message: "CategoryType and related categories deleted successfully.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// advisory
+
+exports.getAdvisories = async (req, res) => {
+  try {
+    const advisories = await Advisory.find().sort({ date: -1 });
+
+    if (!advisories || advisories.length === 0) {
+      return res.status(200).json({ message: "No advisories found", data: [] });
+    }
+
+    return res.status(200).json({
+      message: "Advisories fetched successfully.",
+      data: advisories,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteAdvisories = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Missing required advisory id" });
+    }
+
+    const advisory = await Advisory.findByIdAndDelete(id);
+
+    if (!advisory) {
+      return res.status(404).json({ message: "Advisory not found" });
+    }
+
+    return res.status(200).json({
+      message: "Advisory deleted successfully.",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
