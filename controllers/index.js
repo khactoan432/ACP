@@ -10,7 +10,7 @@ const {
   Exercise,
   Topic,
   Lesson,
-  Exam,
+  Exam, CategoryType, Category,
   Advisory,
 } = require("../models");
 
@@ -214,22 +214,48 @@ exports.getLessons = async (req, res) => {
 
 exports.getExams = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit); // Default: 10 (fetch 10 records)
+    const page = parseInt(req.query.page) || 1; // Default: page 1
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 records per page
+    let filters = [];
+    try {
+      filters = JSON.parse(req.query.filters || "[]");
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid filters format" });
+    }
 
-    const totals = await Exam.countDocuments();
+    console.log(filters);
 
-    const exams = await Exam.find()
-      .sort({ createdAt: 1 })
+    // Xây dựng query để kiểm tra tất cả các type trong filters
+    const query = {};
+    if (filters.length > 0) {
+      query.$and = filters.map((filter) => ({
+        categories: {
+          $elemMatch: {
+            type: filter.type,
+            value: { $in: filter.value },
+          },
+        },
+      }));
+    }
+
+    // Tổng số exam phù hợp với bộ lọc
+    const total = await Exam.countDocuments(query);
+    console.log(total);
+
+    // Fetch exam với phân trang và bộ lọc
+    const exams = await Exam.find(query)
+      .sort({ createdAt: 1 }) // Sắp xếp theo ngày tạo
       .skip((page - 1) * limit)
       .limit(limit);
+
+    // Trả về kết quả
     res.status(200).json({
       message: "Get Exams successfully.",
-      total: totals,
+      total,
       data: exams,
     });
   } catch (err) {
-    console.error("Error fetching paginated exams:", err);
+    console.error("Error fetching filtered exams:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -270,6 +296,31 @@ exports.getExamDetail = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getCategories = async (req, res) => {
+  try {
+    // Truy vấn tất cả CategoryType và các Category liên quan qua categoryIds
+    const categoryTypes = await CategoryType.find().populate("categoryIds"); // populate đúng tên trường
+
+    if (!categoryTypes || categoryTypes.length === 0) {
+      return res
+        .status(200)
+        .json({ message: "No CategoryTypes found", data: [] });
+    }
+
+    const formattedCategoryTypes = categoryTypes.map((categoryType) => ({
+      ...categoryType.toObject(),
+      value: categoryType.categoryIds, // Đổi tên trường từ categoryIds thành value
+    }));
+
+    return res.status(200).json({
+      message: "CategoryTypes fetched successfully.",
+      data: formattedCategoryTypes,
+    });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };

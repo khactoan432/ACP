@@ -1595,15 +1595,92 @@ exports.deleteDescribe = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
   try {
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const orders = await Order.find()
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit);
-    res.status(200).json(orders);
+    const page = parseInt(req.query.page) || 1; // Default: 1 (page đầu tiên)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 records mỗi trang
+    const skip = (page - 1) * limit;
+
+    const totalOrders = await Order.countDocuments();
+
+    const orders = await Order.aggregate([
+      // Sắp xếp theo createdAt
+      { $sort: { createdAt: 1 } },
+
+      // Lấy dữ liệu theo page
+      { $skip: skip },
+      { $limit: limit },
+
+      // Lookup với collection COURSE hoặc EXAM tùy theo type
+      {
+        $lookup: {
+          from: "courses", // Collection cho COURSE
+          localField: "id_material",
+          foreignField: "_id",
+          as: "courseDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "exams", // Collection cho EXAM
+          localField: "id_material",
+          foreignField: "_id",
+          as: "examDetails",
+        },
+      },
+
+      // Gộp thông tin COURSE hoặc EXAM vào kết quả
+      {
+        $addFields: {
+          materialName: {
+            $cond: {
+              if: { $eq: ["$type", "COURSE"] },
+              then: { $arrayElemAt: ["$courseDetails.name", 0] },
+              else: { $arrayElemAt: ["$examDetails.name", 0] },
+            },
+          },
+        },
+      },
+
+      // Lookup thêm thông tin User
+      {
+        $lookup: {
+          from: "users", // Collection cho User
+          localField: "id_user",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+
+      // Gộp thông tin User (chỉ lấy email)
+      {
+        $addFields: {
+          userEmail: { $arrayElemAt: ["$userDetails.email", 0] },
+        },
+      },
+
+      // Chỉ giữ lại các trường cần thiết
+      {
+        $project: {
+          id_user: 1,
+          id_material: 1,
+          code: 1,
+          type: 1,
+          payment_status: 1,
+          amount: 1,
+          method: 1,
+          createdAt: 1,
+          materialName: 1, // Tên material (COURSE hoặc EXAM)
+          userEmail: 1,    // Email của user
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      message: "Get orders successfully.",
+      total: totalOrders,
+      data: orders,
+    });
   } catch (err) {
-    console.error("Error fetching paginated orders:", error);
+    console.error("Error fetching paginated orders with material name and user email:", err);
     res.status(500).json({ error: err.message });
   }
 };
