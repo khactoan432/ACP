@@ -1921,7 +1921,7 @@ exports.getCategories = async (req, res) => {
 
     const formattedCategoryTypes = categoryTypes.map((categoryType) => ({
       ...categoryType.toObject(),
-      value: categoryType.categoryIds, // Đổi tên trường từ categoryIds thành value
+      categories: categoryType.categoryIds, // Đổi tên trường từ categoryIds thành value
     }));
 
     return res.status(200).json({
