@@ -1669,7 +1669,7 @@ exports.getOrders = async (req, res) => {
           method: 1,
           createdAt: 1,
           materialName: 1, // Tên material (COURSE hoặc EXAM)
-          userEmail: 1,    // Email của user
+          userEmail: 1, // Email của user
         },
       },
     ]);
@@ -1680,7 +1680,10 @@ exports.getOrders = async (req, res) => {
       data: orders,
     });
   } catch (err) {
-    console.error("Error fetching paginated orders with material name and user email:", err);
+    console.error(
+      "Error fetching paginated orders with material name and user email:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -2012,16 +2015,16 @@ exports.getCategories = async (req, res) => {
 
 exports.createCategories = async (req, res) => {
   try {
-    const { option, type, value } = req.body;
+    const { option, type, categories } = req.body;
 
     // Kiểm tra nếu thiếu option, type hoặc value
-    if (!option || !type || !value) {
+    if (!option || !type || !categories) {
       return res
         .status(400)
-        .json({ message: "Missing required option | type | value" });
+        .json({ message: "Missing required option | type | categories" });
     }
 
-    // Nếu value là một mảng, tạo từng Category cho mỗi giá trị trong value
+    // Nếu categories là một mảng, tạo từng Category cho mỗi giá trị trong categories
     const newCategoryType = await CategoryType.create({
       option,
       type,
@@ -2031,13 +2034,13 @@ exports.createCategories = async (req, res) => {
     const categoryIds = [];
 
     // Kiểm tra nếu value là mảng, nếu không thì gán thành mảng
-    const values = Array.isArray(value) ? value : [value];
+    const values = Array.isArray(categories) ? categories : [categories];
 
     // Tạo các Category và lưu ID vào categoryIds
     for (let val of values) {
       const newCategory = await Category.create({
         category_type_id: newCategoryType._id,
-        value: val,
+        value: val.value,
       });
       categoryIds.push(newCategory._id);
     }
@@ -2067,12 +2070,12 @@ exports.createCategories = async (req, res) => {
 exports.updateCategories = async (req, res) => {
   try {
     const { id } = req.params;
-    const { option, type, value } = req.body;
+    const { option, type, categories } = req.body;
 
-    if (!id || (!option && !type && !value)) {
+    if (!id) {
       return res
         .status(400)
-        .json({ message: "Missing required id or update fields" });
+        .json({ message: "Missing required id categoryType" });
     }
 
     // Tìm CategoryType dựa trên id
@@ -2082,28 +2085,35 @@ exports.updateCategories = async (req, res) => {
       return res.status(404).json({ message: "CategoryType not found" });
     }
 
-    // Nếu có giá trị 'value', xử lý cập nhật nhiều Category
-    if (value) {
-      const values = Array.isArray(value) ? value : [value];
+    // Nếu có giá trị 'categories', xử lý cập nhật nhiều Category
+    if (categories) {
+      const values = Array.isArray(categories) ? categories : [categories];
       const categoryPromises = values.map(async (val) => {
-        const category = await Category.findOne({
-          category_type_id: categoryType._id,
-          value: val,
-        });
-        if (category) {
-          category.value = val;
-          await category.save();
-          return category._id;
-        } else {
+        const id = val._id;
+        if (id && val.value) {
+          const category = await Category.findByIdAndUpdate(id);
+          if (category) {
+            category.value = val.value;
+            await category.save();
+          }
+        } else if (!id && val.value) {
           const newCategory = await Category.create({
             category_type_id: categoryType._id,
-            value: val,
+            value: val.value,
           });
           return newCategory._id;
+        } else if (id && !val.value) {
+          const deleteCategory = await Category.findByIdAndDelete(id);
+          await CategoryType.updateMany(
+            { categoryIds: id },
+            { $pull: { categoryIds: id } }
+          );
         }
       });
 
-      const updatedCategoryIds = await Promise.all(categoryPromises);
+      const updatedCategoryIds = (await Promise.all(categoryPromises)).filter(
+        (id) => id // Lọc bỏ các phần tử `undefined`
+      );
       categoryType.categoryIds = [
         ...categoryType.categoryIds,
         ...updatedCategoryIds,
