@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 // Create MoMo payment
 const createMoMoPayment = async (req, res) => {
-    const { id_user, id_material, type } = req.body;
+    const { id_user, id_material, type, amount } = req.body;
 
     if (!id_user || !id_material || !type) {
         return res.status(400).json({ message: 'Missing required information.' });
@@ -13,7 +13,7 @@ const createMoMoPayment = async (req, res) => {
 
     try {
         const paymentResult = await createPayment({
-            amount: 50000,
+            amount: Number(amount),
             orderInfo: 'Pay with MoMo',
         });
 
@@ -25,6 +25,7 @@ const createMoMoPayment = async (req, res) => {
                 id_user,
                 id_material,
                 type,
+                amount,
                 payment_status: 'pending',
             });
 

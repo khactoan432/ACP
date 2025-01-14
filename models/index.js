@@ -1,5 +1,7 @@
 const Achievement = require("./achievement");
 const Banner = require("./banner");
+const Category = require("./category");
+const CategoryType = require("./categoryType");
 const Comment = require("./comment");
 const Course = require("./course");
 const Describe = require("./describe");
@@ -32,4 +34,6 @@ module.exports = {
   Topic,
   User,
   Advisory,
+  CategoryType,
+  Category
 };

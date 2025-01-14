@@ -29,6 +29,8 @@ router.get("/course/:id", indexController.getCourseDetail);
 router.get("/topics", indexController.getTopics);
 router.get("/lessons", indexController.getLessons);
 router.get("/exams", indexController.getExams);
+router.get("/exam/:id", indexController.getExamDetail);
+router.get("/categories", indexController.getCategories);
 
 // advisory user
 router.post("/advisories", indexController.createAdvisory);

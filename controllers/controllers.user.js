@@ -11,7 +11,7 @@ const {
 exports.getCourses = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit); // Default: 10 (fetch 10 records)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
 
     const totals = await Course.countDocuments();
 
@@ -100,9 +100,62 @@ exports.getCourseDetail = async (req, res) => {
 
 exports.getExams = async (req, res) => {
   try {
-    const exams = await exam.find();
-    res.status(200).json(courses);
+    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+
+    const totals = await Exam.countDocuments();
+
+    const exams = await Exam.find()
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+    res.status(200).json({
+      message: "Get courses successfully.",
+      total: totals,
+      data: exams,
+    });
   } catch (err) {
+    console.error("Error fetching paginated exams:", error);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getExamDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const structExam = {};
+
+    // Lấy thông tin khóa học
+    const exam = await Exam.findById(id).lean();
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+    structExam.exam = JSON.parse(JSON.stringify(exam));
+
+    const describesData = await Describe.find({ id_material: id }).lean();
+    let describes = JSON.parse(JSON.stringify(describesData)); // copy deep dataDescription
+
+    if (describes.length > 0) {
+      const describeIds = describes.map((d) => d._id.toString());
+      const allOverviews = await Overview.find({
+        id_material: { $in: describeIds },
+      }).lean();
+
+      describes.forEach((d) => {
+        d.overviews = allOverviews.filter(
+          (o) => o.id_material.toString() === d._id.toString()
+        );
+      });
+    }
+
+    structExam.exam.describes = describes;
+
+    res.status(200).json({
+      data: structExam,
+      message: "Get Exam detail successfully!",
+    });
+  } catch (err) {
+    console.error(err.message);
     res.status(500).json({ error: err.message });
   }
 };
