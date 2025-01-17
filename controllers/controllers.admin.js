@@ -752,13 +752,20 @@ exports.getCourseDetail = async (req, res) => {
 
 exports.getTopics = async (req, res) => {
   try {
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const topics = await Topic.find()
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit);
-    res.status(200).json(topics);
+    const { id } = req.params;
+    const allTopic = await Topic.find({ id_course: id }).lean();
+
+    if (allTopic.length > 0) {
+      res.status(200).json({
+        message: "Get all video successfully",
+        data: allTopic,
+      });
+    } else {
+      res.status(200).json({
+        message: "No topic found",
+        data: [],
+      });
+    }
   } catch (err) {
     console.error("Error fetching paginated topics:", error);
     res.status(500).json({ error: err.message });
@@ -767,17 +774,18 @@ exports.getTopics = async (req, res) => {
 
 exports.createTopic = async (req, res) => {
   try {
-    const { id_course, name } = req.body;
+    const { id } = req.params;
+    const { name } = req.body;
 
-    if (!id_course || !name) {
+    if (!id || !name) {
       return res
         .status(400)
         .json({ error: "Course ID and name are required." });
     }
 
-    const newTopic = await Topic.create({ id_course, name, lessonIds: [] });
+    const newTopic = await Topic.create({ id_course: id, name, lessonIds: [] });
     await Course.findByIdAndUpdate(
-      id_course,
+      id,
       { $push: { topicIds: newTopic._id } },
       { new: true }
     );
@@ -798,9 +806,7 @@ exports.createTopic = async (req, res) => {
 exports.updateTopic = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("id param: ", id);
     const updateData = req.body;
-    console.log("updateData: ", updateData);
 
     if (!Object.keys(updateData).length) {
       return res.status(400).json({ error: "No data provided for update." });
@@ -860,40 +866,66 @@ exports.deleteTopic = async (req, res) => {
 
 exports.getLessons = async (req, res) => {
   try {
-    const skip = parseInt(req.query.skip) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
-    const lessons = await Lesson.find()
+    const { id } = req.params;
+    const skip = parseInt(req.query.skip) || 0;
+    const limit = parseInt(req.query.limit) || 10;
+    const allLeson = await Lesson.find({ id_topic: id })
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
-    res.status(200).json(lessons);
+
+    if (allLeson.length > 0) {
+      const exercisePromise = allLeson.map(async (lesson) => {
+        const exercises = await Exercise.find({
+          _id: { $in: lesson.exerciseIds },
+        });
+        return {
+          ...lesson.toObject(),
+          exercises,
+        };
+      });
+
+      const allLessonWithExercises = await Promise.all(exercisePromise);
+      res.status(200).json({
+        message: "Describes fetched successfully",
+        data: allLessonWithExercises,
+      });
+    } else {
+      res.status(200).json({
+        message: "No topic found",
+        data: [],
+      });
+    }
   } catch (err) {
-    console.error("Error fetching paginated lessons:", error);
+    console.error("Error fetching paginated topics:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createLesson = async (req, res) => {
   try {
-    const { id_topic, name, status } = req.body;
-    // const file = req.files["fileImage"];
-    // cmt for tes internet low
+    const { id } = req.params;
+    console.log("id: ", id);
+    const { name, status } = req.body;
+    console.log("name: ", name);
+    console.log("status: ", status);
     const file = req.files["fileVideo"];
+    console.log("file", file);
 
-    if (!id_topic || !name || !status) {
+    if (!id || !name || !status) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
     const uploadedFile = await uploadMultipleFilesToGCS(file);
-
+    console.log("uploaded file", uploadedFile);
     const newLesson = await Lesson.create({
-      id_topic,
+      id_topic: id,
       name,
       video: uploadedFile[0],
       status,
     });
     await Topic.findByIdAndUpdate(
-      id_topic,
+      id,
       { $push: { lessonIds: newLesson._id } },
       { new: true }
     );
@@ -914,20 +946,16 @@ exports.createLesson = async (req, res) => {
 exports.updateLesson = async (req, res) => {
   try {
     const { id } = req.params;
-    let file = "";
     let video = "";
-    // if internet low : req.files["fileImage"] else req.files["fileVideo"]
     if (req.files["fileVideo"]) {
-      file = req.files["fileVideo"];
-
-      const arrVideo = await uploadMultipleFilesToGCS(file);
-      video = arrVideo[0];
+      let file = req.files["fileVideo"];
+      const link = await uploadMultipleFilesToGCS(file);
+      video = link[0];
     } else {
       video = req.body.video;
     }
 
-    console.log("video link :", video);
-    let { name, exercises } = req.body;
+    let { name } = req.body;
     if (!name | !video) {
       return res
         .status(400)
@@ -938,67 +966,21 @@ exports.updateLesson = async (req, res) => {
       id,
       {
         name,
-        video: video,
+        video,
       },
       {
         new: true,
         runValidators: true,
       }
     );
-    let allExercises = [];
-    exercises = JSON.parse(exercises);
-
-    if (exercises && Array.isArray(exercises)) {
-      for (let exercise of exercises) {
-        // Sử dụng for...of thay vì forEach
-        if (exercise._id !== "") {
-          const idExercise = exercise._id;
-          const name = exercise.name;
-          const link = exercise.link;
-          const exerciseUpdated = await Exercise.findByIdAndUpdate(
-            idExercise,
-            {
-              name,
-              link,
-            },
-            {
-              new: true,
-              runValidators: true,
-            }
-          );
-          allExercises.push(exerciseUpdated);
-        } else {
-          const name = exercise.name;
-          const link = exercise.link;
-
-          const newExercise = await Exercise.create({
-            id_lesson: id,
-            name,
-            link,
-          });
-          allExercises.push(newExercise);
-
-          await Lesson.findByIdAndUpdate(
-            id,
-            { $push: { exerciseIds: newExercise._id } },
-            { new: true }
-          );
-        }
-      }
-    } else {
-      console.error("exercises is not an array");
-    }
 
     if (!updatedLesson) {
       return res.status(404).json({ error: "Lesson not found." });
     }
-    if (!allExercises) {
-      return res.status(404).json({ error: "Exercise not found." });
-    }
 
     res.status(200).json({
       message: "Lesson updated successfully.",
-      data: { lesson: updatedLesson, exercise: allExercises },
+      data: updatedLesson,
     });
   } catch (error) {
     if (error.kind === "ObjectId") {
@@ -1035,9 +1017,10 @@ exports.deleteLesson = async (req, res) => {
 
 exports.createExercise = async (req, res) => {
   try {
-    const { id_lesson, dataExercise } = req.body;
+    const { id } = req.params;
+    const { dataExercise } = req.body;
 
-    if (!id_lesson) {
+    if (!id) {
       return res.status(400).json({ error: "All fields are required." });
     }
     let dataLink = [];
@@ -1045,10 +1028,14 @@ exports.createExercise = async (req, res) => {
       for (let i = 0; i < dataExercise.length; i++) {
         const name = dataExercise[i].name;
         const link = dataExercise[i].link;
-        const newExercise = await Exercise.create({ id_lesson, name, link });
+        const newExercise = await Exercise.create({
+          id_lesson: id,
+          name,
+          link,
+        });
 
         await Lesson.findByIdAndUpdate(
-          id_lesson,
+          id,
           { $push: { exerciseIds: newExercise._id } },
           { new: true }
         );
@@ -1072,20 +1059,20 @@ exports.createExercise = async (req, res) => {
 exports.updateExercise = async (req, res) => {
   try {
     const { id } = req.params;
-    const { updateData } = req.body; // link, name
+    const { name, link } = req.body;
 
     if (!id) {
       return res.status(400).json({ error: "ID fields are required." });
     }
 
-    if (!Object.keys(updateData).length) {
-      return res.status(400).json({ error: "No data provided for update." });
-    }
-
-    const updatedExercise = await Exercise.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedExercise = await Exercise.findByIdAndUpdate(
+      id,
+      { name, link },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!updatedExercise) {
       return res.status(404).json({ error: "Exam not found." });
@@ -1094,11 +1081,6 @@ exports.updateExercise = async (req, res) => {
     res.status(200).json({
       message: "Exam updated successfully.",
       data: updatedExercise,
-    });
-
-    res.status(201).json({
-      message: "Lesson created successfully.",
-      data: dataLink,
     });
   } catch (error) {
     console.error("Error creating lesson:", error);
@@ -1196,7 +1178,8 @@ exports.updateExam = async (req, res) => {
     let image = "";
     if (req.files["fileImage"]) {
       fileImage = req.files["fileImage"];
-      image = await uploadMultipleFilesToGCS(fileImage);
+      let linkImage = await uploadMultipleFilesToGCS(fileImage);
+      image = linkImage[0];
     } else {
       image = req.body.image;
     }
@@ -1204,18 +1187,16 @@ exports.updateExam = async (req, res) => {
     let fileVideo = "";
     let video = "";
     if (req.files["fileVideo"]) {
-      // fileVideo = req.files["fileImage"];
-      // if test image when internet low
       fileVideo = req.files["fileVideo"];
-
-      video = await uploadMultipleFilesToGCS(fileVideo);
+      let linkVideo = await uploadMultipleFilesToGCS(fileVideo);
+      video = linkVideo[0];
     } else {
       video = req.body.video;
     }
 
     const { name, link, price, discount, categories } = req.body;
 
-    if (!name || !link || !image || !price || !discount) {
+    if (!name || !link || !price || !discount || !image || !video) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -1275,7 +1256,8 @@ exports.deleteExam = async (req, res) => {
 
 exports.getExamVideos = async (req, res) => {
   try {
-    const allVideo = await ExamVideo.find().lean();
+    const { id } = req.params;
+    const allVideo = await ExamVideo.find({ id_exam: id }).lean();
 
     if (allVideo.length > 0) {
       res.status(200).json({
@@ -1296,8 +1278,6 @@ exports.createExamVideo = async (req, res) => {
   try {
     const { id } = req.params;
     const { describe } = req.body;
-    console.log("id: ", id);
-    console.log("describe: ", describe);
     let video = "";
     const videoFile = req.files["fileVideo"];
     if (videoFile) {
@@ -1306,8 +1286,6 @@ exports.createExamVideo = async (req, res) => {
     if (!video) {
       return res.status(400).json({ error: "Video is required" });
     }
-    console.log("video: ", video);
-    console.log("description: ", describe);
     const newExamVideo = await ExamVideo.create({
       id_exam: id,
       describe,
@@ -1332,11 +1310,17 @@ exports.createExamVideo = async (req, res) => {
 exports.updateExamVideo = async (req, res) => {
   try {
     const { id } = req.params;
-    let { describe, video } = req.body;
-    const videoFile = req.files["fileVideo"];
-    if (videoFile) {
-      video = await uploadMultipleFilesToGCS(videoFile);
+
+    let { describe } = req.body;
+    let video = "";
+
+    if (req.files["fileVideo"]) {
+      let linkVideo = await uploadMultipleFilesToGCS(req.files["fileVideo"]);
+      video = linkVideo[0];
+    } else {
+      video = req.body.video;
     }
+    console.log("video: ", video);
     const updateVideoExam = await ExamVideo.findByIdAndUpdate(
       id,
       { describe, video },
@@ -1573,6 +1557,7 @@ exports.updateDescribe = async (req, res) => {
 exports.deleteDescribe = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("id: ", id);
 
     // Find Describe by ID and delete
     const deletedDescribe = await Describe.findByIdAndDelete(id);

@@ -59,18 +59,18 @@ router.delete("/course/:id", adminController.deleteCourse);
 //course detail
 router.get("/course-detail/:id", adminController.getCourseDetail);
 
-router.get("/topics", adminController.getTopics);
-router.post("/topic", adminController.createTopic);
+router.get("/topics/:id", adminController.getTopics);
+router.post("/topic/:id", adminController.createTopic);
 router.put("/topic/:id", adminController.updateTopic);
 router.delete("/topic/:id", adminController.deleteTopic);
 
-router.get("/lessons", adminController.getLessons);
-router.post("/lesson", uploadFields, adminController.createLesson);
+router.get("/lessons/:id", adminController.getLessons);
+router.post("/lesson/:id", uploadFields, adminController.createLesson);
 router.put("/lesson/:id", uploadFields, adminController.updateLesson);
 router.delete("/lesson/:id", adminController.deleteLesson);
 
 // router.get("/exercise", adminController.getExercise);
-router.post("/exercise", adminController.createExercise);
+router.post("/exercise/:id", adminController.createExercise);
 router.put("/exercise/:id", adminController.updateExercise);
 router.delete("/exercise/:id", adminController.deleteExercise);
 
@@ -84,7 +84,7 @@ router.post("/exam", uploadFields, adminController.createExam);
 router.put("/exam/:id", uploadFields, adminController.updateExam);
 router.delete("/exam/:id", adminController.deleteExam);
 
-router.get("/exam/videos", adminController.getExamVideos);
+router.get("/exam/videos/:id", adminController.getExamVideos);
 router.post("/exam/video/:id", uploadFields, adminController.createExamVideo);
 router.put("/exam/video/:id", uploadFields, adminController.updateExamVideo);
 router.delete("/exam/video/:id", adminController.deleteExamVideo);
