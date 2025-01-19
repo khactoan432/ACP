@@ -31,8 +31,8 @@ const Category = require("../models/category");
 
 exports.getBanners = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const page = parseInt(req?.query?.page) || 1; // Default: 0 (start from the beginning)
+    const limit = parseInt(req?.query?.limit) || 100; // Default: 10 (fetch 10 records)
 
     // Tính số lượng banners
     const totalBanners = await Banner.countDocuments();
@@ -54,22 +54,17 @@ exports.getBanners = async (req, res) => {
 
 exports.createBanner = async (req, res) => {
   try {
-    const { folderPath } = req.body;
-    const files = req.files;
+    const fileImage = req.files["fileImage"];
 
-    if (!folderPath) {
-      return res.status(400).json({ message: "Folder path is required!" });
+    if (!fileImage || fileImage.length === 0) {
+      return res.status(400).json({ message: "No fileImage uploaded!" });
     }
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded!" });
-    }
-
-    // Upload multiple files to Google Cloud Storage
-    const publicUrls = await uploadMultipleFilesToGCS(files, "Banners");
+    // Upload multiple fileImage to Google Cloud Storage
+    const publicUrls = await uploadMultipleFilesToGCS(fileImage, "Banners");
 
     if (!publicUrls || publicUrls.length === 0) {
-      return res.status(500).json({ message: "Failed to upload files." });
+      return res.status(500).json({ message: "Failed to upload fileImage." });
     }
 
     // Save each image URL to the database
@@ -95,12 +90,19 @@ exports.createBanner = async (req, res) => {
 exports.updateBanner = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-    const files = req.files[0];
 
-    const publicUrl = await uploadFileToGCS(files, "Banners");
+    let image = "";
 
-    if (!publicUrl) {
+    if (req.files["fileImage"]) {
+      let linkImage = await uploadMultipleFilesToGCS(
+        req.files["fileImage"],
+        "Banners"
+      );
+      image = linkImage[0];
+    } else {
+      image = req.body.image;
+    }
+    if (!image) {
       return res.status(500).json({ message: "Failed to upload file." });
     }
 
@@ -119,13 +121,15 @@ exports.updateBanner = async (req, res) => {
     // Xóa file tương ứng trong Google Cloud Storage
     await deleteFileFromGCS(fileName);
 
-    updateData.image = publicUrl;
-
     // Find Banner by ID and update
-    const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
-    });
+    const updatedBanner = await Banner.findByIdAndUpdate(
+      id,
+      { image },
+      {
+        new: true, // Return the updated document
+        runValidators: true, // Run schema validators
+      }
+    );
 
     if (!updatedBanner) {
       return res.status(404).json({ message: "Banner not found" });
@@ -178,8 +182,8 @@ exports.deleteBanner = async (req, res) => {
 
 exports.getAchievements = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const page = parseInt(req.query.page) || 1; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 100; // Default: 10 (fetch 10 records)
 
     // Tính số lượng
     const totalAchievements = await Achievement.countDocuments();
@@ -201,22 +205,21 @@ exports.getAchievements = async (req, res) => {
 
 exports.createAchievement = async (req, res) => {
   try {
-    const files = req.files;
+    const fileImage = req.files["fileImage"];
+    if (!fileImage || fileImage.length === 0) {
+      return res.status(400).json({ message: "No fileImage uploaded!" });
+    }
+    // Upload multiple fileImage to Google Cloud Storage
+    const publicUrl = await uploadMultipleFilesToGCS(fileImage, "Achievements");
+
+    if (!publicUrl) {
+      return res.status(500).json({ message: "Failed to upload fileImage." });
+    }
+
     const { email_user, prize, competition } = req.body;
 
     if (!email_user || !prize || !competition) {
       return res.status(400).json({ message: "All fields are required!" });
-    }
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded!" });
-    }
-
-    // Upload multiple files to Google Cloud Storage
-    const publicUrl = await uploadFileToGCS(files[0], "Achievements");
-
-    if (!publicUrl) {
-      return res.status(500).json({ message: "Failed to upload files." });
     }
 
     // Save image URL to the database
@@ -224,7 +227,7 @@ exports.createAchievement = async (req, res) => {
       email_user,
       prize,
       competition,
-      image: publicUrl,
+      image: publicUrl[0],
     });
 
     // Send a successful response with the created banners
@@ -244,8 +247,21 @@ exports.createAchievement = async (req, res) => {
 exports.updateAchievement = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-    const files = req.files;
+    const { email_user, prize, competition } = req.body;
+    let image = "";
+    if (req.files["fileImage"]) {
+      let linkImage = await uploadMultipleFilesToGCS(
+        req.files["fileImage"],
+        "Achievements"
+      );
+      image = linkImage[0];
+    } else {
+      image = req.body.image;
+    }
+
+    if (!image) {
+      return res.status(500).json({ message: "Failed to upload file." });
+    }
 
     // Find Banner by ID
     const achievement = await Achievement.findById(id);
@@ -254,28 +270,10 @@ exports.updateAchievement = async (req, res) => {
       return res.status(404).json({ message: "Achievement not found" });
     }
 
-    if (files && files.length !== 0) {
-      const publicUrl = await uploadFileToGCS(files[0], "Achievements");
-
-      if (!publicUrl) {
-        return res.status(500).json({ message: "Failed to upload file." });
-      }
-
-      // Lấy tên file từ URL của achievement
-      const fileName = achievement.image
-        .split("https://storage.googleapis.com/acp_website/")
-        .pop(); // Assuming image URL is like "https://storage.googleapis.com/your-bucket-name/filename"
-
-      // Xóa file tương ứng trong Google Cloud Storage
-      await deleteFileFromGCS(fileName);
-
-      updateData.image = publicUrl;
-    }
-
     // Find achievement by ID and update
     const updatedAchievement = await Achievement.findByIdAndUpdate(
       id,
-      updateData,
+      { email_user, prize, competition, image },
       {
         new: true, // Return the updated document
         runValidators: true, // Run schema validators
@@ -334,8 +332,8 @@ exports.deleteAchievement = async (req, res) => {
 exports.getUsers = async (req, res) => {
   try {
     const role = req.query.role || "";
-    const page = parseInt(req.query.page) || 0; // Default: 0 (start from the beginning)
-    const limit = parseInt(req.query.limit) || 10; // Default: 10 (fetch 10 records)
+    const page = parseInt(req.query.page) || 1; // Default: 0 (start from the beginning)
+    const limit = parseInt(req.query.limit) || 100; // Default: 10 (fetch 10 records)
 
     // Tính số lượng người dùng có role
     const totalTeachers = await User.countDocuments({ role: role });
@@ -359,7 +357,7 @@ exports.getUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const files = req.files;
+    const fileImage = req.files["fileImage"];
     const {
       name,
       image,
@@ -393,15 +391,15 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: "Mật khẩu không trùng khớp." });
     }
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded!" });
+    if (!fileImage || fileImage.length === 0) {
+      return res.status(400).json({ message: "No fileImage uploaded!" });
     }
 
-    // Upload multiple files to Google Cloud Storage
-    const publicUrl = await uploadFileToGCS(files[0], "Users");
+    // Upload multiple fileImage to Google Cloud Storage
+    const publicUrl = await uploadFileToGCS(fileImage[0], "Users");
 
     if (!publicUrl) {
-      return res.status(500).json({ message: "Failed to upload files." });
+      return res.status(500).json({ message: "Failed to upload fileImage." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -432,8 +430,24 @@ exports.createUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body || {};
-    const files = req.files;
+    const { name, email, codeforce_name, phone_number } = req.body;
+    if (!name || !email || !codeforce_name || !phone_number) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+    let image = "";
+
+    if (req.files["fileImage"]) {
+      let linkImage = await uploadMultipleFilesToGCS(
+        req.files["fileImage"],
+        "Banners"
+      );
+      image = linkImage[0];
+    } else {
+      image = req.body.image;
+    }
+    if (!image) {
+      return res.status(500).json({ message: "Failed to upload file." });
+    }
 
     const user = await User.findById(id);
 
@@ -441,13 +455,7 @@ exports.updateUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (files && files.length !== 0) {
-      const publicUrl = await uploadFileToGCS(files[0], "Users");
-
-      if (!publicUrl) {
-        return res.status(500).json({ message: "Failed to upload file." });
-      }
-
+    if (image && image.length !== 0) {
       // Lấy tên file từ URL của achievement
       const fileName = user.image
         .split("https://storage.googleapis.com/acp_website/")
@@ -455,14 +463,22 @@ exports.updateUser = async (req, res) => {
 
       // Xóa file tương ứng trong Google Cloud Storage
       await deleteFileFromGCS(fileName);
-
-      updateData.image = publicUrl;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
-      new: true, // Trả về tài liệu sau khi cập nhật
-      runValidators: true, // Chạy các validator của schema
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        name,
+        email,
+        codeforce_name,
+        phone_number,
+        image,
+      },
+      {
+        new: true, // Trả về tài liệu sau khi cập nhật
+        runValidators: true, // Chạy các validator của schema
+      }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found." });
@@ -1320,7 +1336,6 @@ exports.updateExamVideo = async (req, res) => {
     } else {
       video = req.body.video;
     }
-    console.log("video: ", video);
     const updateVideoExam = await ExamVideo.findByIdAndUpdate(
       id,
       { describe, video },

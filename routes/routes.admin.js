@@ -29,26 +29,18 @@ router.use(authenticateToken);
 router.use(authorizeRole(["ADMIN"]));
 
 router.get("/banners", adminController.getBanners);
-router.post("/banner", upload.array("files"), adminController.createBanner);
-router.put("/banner/:id", upload.array("files"), adminController.updateBanner);
+router.post("/banner", uploadFields, adminController.createBanner);
+router.put("/banner/:id", uploadFields, adminController.updateBanner);
 router.delete("/banner/:id", adminController.deleteBanner);
 
 router.get("/achievements", adminController.getAchievements);
-router.post(
-  "/achievement",
-  upload.array("files"),
-  adminController.createAchievement
-);
-router.put(
-  "/achievement/:id",
-  upload.array("files"),
-  adminController.updateAchievement
-);
+router.post("/achievement", uploadFields, adminController.createAchievement);
+router.put("/achievement/:id", uploadFields, adminController.updateAchievement);
 router.delete("/achievement/:id", adminController.deleteAchievement);
 
 router.get("/users", adminController.getUsers);
-router.post("/user", upload.array("files"), adminController.createUser);
-router.put("/user/:id", upload.array("files"), adminController.updateUser);
+router.post("/user", uploadFields, adminController.createUser);
+router.put("/user/:id", uploadFields, adminController.updateUser);
 router.delete("/user/:id", adminController.deleteUser);
 
 router.get("/courses", adminController.getCourses);
