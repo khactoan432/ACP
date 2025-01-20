@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: true,
+    required: false,
   },
   email: {
     type: String,
@@ -31,7 +31,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["USER", "TEACHER","ADMIN"],
+    enum: ["USER", "TEACHER", "ADMIN"],
     required: true,
   },
   createdAt: {

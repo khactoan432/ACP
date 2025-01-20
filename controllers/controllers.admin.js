@@ -360,7 +360,6 @@ exports.createUser = async (req, res) => {
     const fileImage = req.files["fileImage"];
     const {
       name,
-      image,
       email,
       password,
       repassword,
@@ -370,18 +369,18 @@ exports.createUser = async (req, res) => {
     } = req.body;
 
     // Validation
-    // try {
-    //   const validationNameCodeforce = await validNameCodeforce(
-    //     codeforce_name
-    //   );
-    //   if (!validationNameCodeforce) {
-    //     return res
-    //       .status(400)
-    //       .json({ error: "Tên codeforce của bạn không tồn tại." });
-    //   }
-    // } catch (error) {
-    //   return res.status(500).json({ error: "Lỗi khi kiểm tra Codeforce Name." });
-    // }
+    try {
+      const validationNameCodeforce = await validNameCodeforce(codeforce_name);
+      if (!validationNameCodeforce) {
+        return res
+          .status(400)
+          .json({ error: "Tên codeforce của bạn không tồn tại." });
+      }
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: "Lỗi khi kiểm tra Codeforce Name." });
+    }
 
     const validationUser = await validUser(email);
     if (validationUser) {
@@ -391,15 +390,14 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: "Mật khẩu không trùng khớp." });
     }
 
-    if (!fileImage || fileImage.length === 0) {
-      return res.status(400).json({ message: "No fileImage uploaded!" });
-    }
-
     // Upload multiple fileImage to Google Cloud Storage
-    const publicUrl = await uploadFileToGCS(fileImage[0], "Users");
+    let publicUrl = "";
+    if (fileImage) {
+      publicUrl = await uploadFileToGCS(fileImage[0], "Users");
 
-    if (!publicUrl) {
-      return res.status(500).json({ message: "Failed to upload fileImage." });
+      if (!publicUrl) {
+        return res.status(500).json({ message: "Failed to upload fileImage." });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

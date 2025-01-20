@@ -9,7 +9,6 @@ class AuthController {
     try {
       const {
         name,
-        image,
         email,
         password,
         repassword,
@@ -23,13 +22,16 @@ class AuthController {
         const validationNameCodeforce = await validNameCodeforce(
           codeforce_name
         );
-        if (!validationNameCodeforce) {
+
+        if (validationNameCodeforce.status !== "OK") {
           return res
             .status(400)
             .json({ error: "Tên codeforce của bạn không tồn tại." });
         }
       } catch (error) {
-        return res.status(500).json({ error: "Lỗi khi kiểm tra email." });
+        return res
+          .status(500)
+          .json({ error: "Lỗi khi kiểm tra tên tài khoản codeforce." });
       }
 
       const validationUser = await validUser(email);
@@ -44,7 +46,6 @@ class AuthController {
 
       const newUser = new User({
         name,
-        image,
         email,
         password: hashedPassword,
         phone_number,
@@ -55,6 +56,7 @@ class AuthController {
 
       res.status(201).json({
         message: "Đăng ký thành công",
+        status: "OK",
         data: `Email: ${newUser.email}`,
       });
     } catch (error) {
