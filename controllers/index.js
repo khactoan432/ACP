@@ -1,6 +1,6 @@
 const {
   Comment,
-  Rate,
+  Interaction,
   Banner,
   Achievement,
   User,
@@ -14,6 +14,8 @@ const {
   Advisory,
 } = require("../models");
 
+const mongoose = require("mongoose");
+
 exports.getComments = async (req, res) => {
   try {
     const comments = await Comment.find();
@@ -23,14 +25,140 @@ exports.getComments = async (req, res) => {
   }
 };
 
-exports.getRates = async (req, res) => {
+exports.getInteractions = async (req, res) => {
   try {
-    const rates = await Rate.find();
-    res.status(200).json(rates);
+    const { id_ref_material, ref_type, type } = req.query;
+
+    // Kiểm tra nếu thiếu các trường bắt buộc
+    if (!id_ref_material || !ref_type || !type) {
+      return res.status(400).json({ message: "Missing required fields!" });
+    }
+
+    const idRefMaterialObjectId = new mongoose.Types.ObjectId(id_ref_material);
+
+    // Sử dụng aggregate để tối ưu truy vấn
+    const interactions = await Interaction.aggregate([
+      {
+        $match: { id_ref_material: idRefMaterialObjectId, ref_type, type },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "id_user",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+      {
+        $lookup: {
+          from: "interactions",
+          let: { interactionId: "$_id" }, // Biến tạm để truyền giá trị _id
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$id_ref_material", "$$interactionId"] }, // So khớp id_ref_material
+                    { $eq: ["$ref_type", "INTERACTION"] }, // Lọc ref_type là "INTERACTION"
+                  ],
+                },
+              },
+            },
+          ],
+          as: "replies",
+        },
+      },
+      {
+        $unwind: {
+          path: "$replies",
+          preserveNullAndEmptyArrays: true, // Giữ giá trị null
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "replies.id_user",
+          foreignField: "_id",
+          as: "replies.user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$replies.user",
+          preserveNullAndEmptyArrays: true, // Giữ giá trị null
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          id_user: { $first: "$id_user" },
+          user_name: { $first: "$user.name" },
+          ref_type: { $first: "$ref_type" },
+          type: { $first: "$type" },
+          rate: { $first: "$rate" },
+          content: { $first: "$content" },
+          createdAt: { $first: "$createdAt" },
+          replies: {
+            $push: {
+              $cond: {
+                if: { $ne: ["$replies", null] }, // Chỉ giữ giá trị không null
+                then: {
+                  _id: "$replies._id",
+                  id_user: "$replies.id_user",
+                  user_name: "$replies.user.name",
+                  user_role: "$replies.user.role",
+                  content: "$replies.content",
+                  createdAt: "$replies.createdAt",
+                },
+                else: "$$REMOVE", // Bỏ qua giá trị null
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          replies: {
+            $filter: {
+              input: "$replies",
+              as: "reply",
+              cond: { $ne: ["$$reply", {}] }, // Loại bỏ các object rỗng
+            },
+          },
+        },
+      },
+      {
+        $sort: { createdAt: -1 }, // Sắp xếp giảm dần theo createdAt, đổi thành 1 để tăng dần
+      },
+      {
+        $project: {
+          id_user: 1,
+          user_name: 1,
+          ref_type: 1,
+          type: 1,
+          rate: 1,
+          content: 1,
+          createdAt: 1,
+          replies: 1,
+        },
+      },
+    ]);
+
+    // Trả về kết quả
+    return res.status(200).json({
+      message: "Get Interactions successfully.",
+      total: interactions.length,
+      data: interactions,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching interactions:", err); // Log lỗi để dễ debug
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 exports.getBanners = async (req, res) => {
   try {

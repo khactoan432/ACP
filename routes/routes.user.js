@@ -23,9 +23,14 @@ router.post("/comments", userController.createComment);
 router.put("/comment/:id", userController.updateComment);
 router.delete("/comment/:id", userController.deleteComment);
 
-router.post("/rate", userController.createRate);
-router.put("/rate/:id", userController.updateRate);
-router.delete("/rate/:id", userController.deleteRate);
+router.post("/interaction", userController.createInteraction);
+router.put("/interaction/:id", userController.updateInteraction);
+router.delete("/interaction/:id", userController.deleteInteraction);
+
+router.get("/progresses", userController.getProgress);
+router.post("/progress", userController.createProgress);
+router.put("/progress/:id", userController.updateProgress);
+router.delete("/progress/:id", userController.deleteProgress);
 
 router.get("/infor", userController.getInfor);
 router.put("/infor/:id", userController.updateInfor);

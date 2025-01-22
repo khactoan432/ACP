@@ -3,7 +3,7 @@ const {
   Banner,
   Achievement,
   Comment,
-  Rate,
+  Interaction,
   Course,
   Topic,
   Lesson,
@@ -1936,50 +1936,50 @@ exports.deleteComment = async (req, res) => {
   }
 };
 
-exports.createRate = async (req, res) => {
+exports.createInteraction = async (req, res) => {
   try {
-    const { id_rated, type, content } = req.body;
-    const id_user = req.user._id;
-    const newRate = new Rate({ id_user, id_rated, type, content });
-    await newRate.save();
-    res.status(201).json(newRate);
+    const { id_user, id_ref_material, ref_type, type, rate, content } = req.body;
+    const newInteraction = new Interaction({ id_user, id_ref_material, ref_type, type, rate, content });
+    await newInteraction.save();
+    res.status(201).json({data: newInteraction});
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
-exports.updateRate = async (req, res) => {
+exports.updateInteraction = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    const updatedRate = await Rate.findByIdAndUpdate(id, updateData, {
+    // Find Interaction by ID and update
+    const updatedInteraction = await Interaction.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
       runValidators: true, // Run schema validators
     });
 
-    if (!updatedRate) {
-      return res.status(404).json({ message: "Register not found" });
+    if (!updatedInteraction) {
+      return res.status(404).json({ message: "Interaction not found" });
     }
 
-    res.status(200).json(updatedRate);
+    res.status(200).json(updatedInteraction);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-exports.deleteRate = async (req, res) => {
+exports.deleteInteraction = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Rate by ID and delete
-    const deletedRate = await Rate.findByIdAndDelete(id);
+    // Find Interaction by ID and delete
+    const deletedInteraction = await Interaction.findByIdAndDelete(id);
 
-    if (!deletedRate) {
-      return res.status(404).json({ message: "Rate not found" });
+    if (!deletedInteraction) {
+      return res.status(404).json({ message: "Interaction not found" });
     }
 
-    res.status(200).json({ message: "Rate deleted successfully" });
+    res.status(200).json({ message: "Interaction deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

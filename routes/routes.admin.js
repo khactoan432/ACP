@@ -99,9 +99,9 @@ router.post("/comment", adminController.createComment);
 router.put("/comment/:id", adminController.updateComment);
 router.delete("/comment/:id", adminController.deleteComment);
 
-router.post("/rate", adminController.createRate);
-router.put("/rate/:id", adminController.updateRate);
-router.delete("/rate/:id", adminController.deleteRate);
+router.post("/interaction", adminController.createInteraction);
+router.put("/interaction/:id", adminController.updateInteraction);
+router.delete("/interaction/:id", adminController.deleteInteraction);
 
 // categories
 router.get("/categories", adminController.getCategories);

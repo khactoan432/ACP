@@ -20,7 +20,7 @@ router.use("/upload", upload);
 router.use("/payment", payment);
 
 router.get("/comments", indexController.getComments);
-router.get("/rates", indexController.getRates);
+router.get("/interactions", indexController.getInteractions);
 router.get("/banners", indexController.getBanners);
 router.get("/users", indexController.getUsers);
 router.get("/achievements", indexController.getAchievements);

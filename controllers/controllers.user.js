@@ -1,6 +1,7 @@
 const {
   Comment,
-  Rate,
+  Interaction,
+  Progress,
   Course,
   Topic,
   Lesson,
@@ -249,50 +250,113 @@ exports.deleteComment = async (req, res) => {
   }
 };
 
-exports.createRate = async (req, res) => {
+exports.createInteraction = async (req, res) => {
   try {
-    const { id_user, id_rated, type, content } = req.body;
-    const newRate = new Rate({ id_user, id_rated, type, content });
-    await newRate.save();
-    res.status(201).json(newRate);
+    const { id_user, id_ref_material, ref_type, type, rate, content } = req.body;
+    const newInteraction = new Interaction({ id_user, id_ref_material, ref_type, type, rate, content });
+    await newInteraction.save();
+    res.status(201).json({data: newInteraction});
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
-exports.updateRate = async (req, res) => {
+exports.updateInteraction = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find Rate by ID and update
-    const updatedRate = await Rate.findByIdAndUpdate(id, updateData, {
+    // Find Interaction by ID and update
+    const updatedInteraction = await Interaction.findByIdAndUpdate(id, updateData, {
       new: true, // Return the updated document
       runValidators: true, // Run schema validators
     });
 
-    if (!updatedRate) {
-      return res.status(404).json({ message: "Rate not found" });
+    if (!updatedInteraction) {
+      return res.status(404).json({ message: "Interaction not found" });
     }
 
-    res.status(200).json(updatedRate);
+    res.status(200).json(updatedInteraction);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-exports.deleteRate = async (req, res) => {
+exports.deleteInteraction = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Rate by ID and delete
-    const deletedRate = await Rate.findByIdAndDelete(id);
+    // Find Interaction by ID and delete
+    const deletedInteraction = await Interaction.findByIdAndDelete(id);
 
-    if (!deletedRate) {
-      return res.status(404).json({ message: "Rate not found" });
+    if (!deletedInteraction) {
+      return res.status(404).json({ message: "Interaction not found" });
     }
 
-    res.status(200).json({ message: "Rate deleted successfully" });
+    res.status(200).json({ message: "Interaction deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getProgress = async (req, res) => {
+  try {
+    const {id_user, id_course} = req.query;
+    // console.log(id_user, id_course);
+    if(!id_course || !id_user) {
+      return res.status(404).json({message: "Fields are require!"})
+    }
+    const Progresses = await Progress.find({id_user, id_course});
+    res.status(200).json(Progresses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createProgress = async (req, res) => {
+  try {
+    const { id_user, id_course, id_lesson } = req.body;
+    const newProgress = new Progress({ id_user, id_course, id_lesson, status: false });
+    await newProgress.save();
+    res.status(201).json({data: newProgress});
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.updateProgress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Find Progress by ID and update
+    const updatedProgress = await Progress.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true, // Run schema validators
+    });
+
+    if (!updatedProgress) {
+      return res.status(404).json({ message: "Progress not found" });
+    }
+
+    res.status(200).json(updatedProgress);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteProgress = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find Progress by ID and delete
+    const deletedProgress = await Progress.findByIdAndDelete(id);
+
+    if (!deletedProgress) {
+      return res.status(404).json({ message: "Progress not found" });
+    }
+
+    res.status(200).json({ message: "Progress deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

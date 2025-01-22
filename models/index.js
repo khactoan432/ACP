@@ -11,11 +11,12 @@ const Exercise = require("./exercise");
 const Lesson = require("./lesson");
 const Order = require("./order");
 const Overview = require("./overview");
-const Rate = require("./rate");
 const Register = require("./register");
 const Topic = require("./topic");
 const User = require("./user");
 const Advisory = require("./advisory");
+const Interaction = require("./interaction");
+const Progress = require("./progress");
 
 module.exports = {
   Achievement,
@@ -29,11 +30,12 @@ module.exports = {
   Lesson,
   Order,
   Overview,
-  Rate,
+  Interaction,
   Register,
   Topic,
   User,
   Advisory,
   CategoryType,
-  Category
+  Category,
+  Progress
 };

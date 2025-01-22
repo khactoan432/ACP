@@ -1,26 +1,21 @@
 const mongoose = require("mongoose");
 
 // Định nghĩa schema
-const RateSchema = new mongoose.Schema({
+const ProgressSchema = new mongoose.Schema({
   id_user: {
     type: String,
     required: true,
   },
-  id_rated: {
+  id_course: {
     type: String,
     required: true,
   },
-  type: {
-    type: String,
-    enum: ["COURSE", "EXAM"],
-    required: true,
-  },
-  rate: {
+  id_lesson: {
     type: String,
     required: true,
   },
-  content: {
-    type: String,
+  status: {
+    type: Boolean,
     required: true,
   },
   createdAt: {
@@ -30,6 +25,6 @@ const RateSchema = new mongoose.Schema({
 });
 
 // Tạo model
-const Rate = mongoose.model("Rate", RateSchema);
+const Progress = mongoose.model("Progress", ProgressSchema);
 
-module.exports = Rate;
+module.exports = Progress;
