@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const TopicSchema = new mongoose.Schema({
   id_course: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "Course",
   },

@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const {
   Comment,
   Interaction,
@@ -294,6 +295,87 @@ exports.deleteInteraction = async (req, res) => {
     }
 
     res.status(200).json({ message: "Interaction deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getBuyedMaterial = async (req, res) => {
+  try {
+    const {id_user} = req.query;
+    // console.log(id_user, id_course);
+    if(!id_user) {
+      return res.status(404).json({message: "Fields are require!"})
+    }
+    const orderCourse = await Order.aggregate([
+      { $match: { payment_status: "paid", id_user: new mongoose.Types.ObjectId(id_user), type: "COURSE" } },
+      {
+        $lookup: {
+          from: "courses", // Collection Course
+          localField: "id_material",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: "$course" }, // Chuyển mảng thành object
+      { $replaceRoot: { newRoot: "$course" } },
+      // Lookup để lấy số lượng progresses của khóa học
+      {
+        $lookup: {
+          from: "progresses", // Bảng Progress
+          let: { courseId: "$_id", userId: new mongoose.Types.ObjectId(id_user) },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$id_course", "$$courseId"] }, // Lọc theo id_course
+                    { $eq: ["$id_user", "$$userId"] } // Lọc theo id_user
+                  ]
+                }
+              }
+            }
+          ],
+          as: "progresses"
+        }
+      },
+
+      // Lookup để lấy tổng số lessons của khóa học
+      {
+        $lookup: {
+          from: "topics", // Bảng Topic
+          localField: "_id",
+          foreignField: "id_course",
+          as: "topics",
+        },
+      },
+      { $unwind: { path: "$topics", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "lessons", // Bảng Lesson
+          localField: "topics._id",
+          foreignField: "id_topic",
+          as: "lessons",
+        },
+      },
+
+    ]);
+
+    const orderExam = await Order.aggregate([
+      { $match: { payment_status: "paid", id_user: new mongoose.Types.ObjectId(id_user), type: "EXAM" } },
+      {
+        $lookup: {
+          from: "exams", // Collection Exam
+          localField: "id_material",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" }, // Chuyển mảng thành object
+      { $replaceRoot: { newRoot: "$exam" } },
+    ]);
+    res.status(200).json({ orderCourse, orderExam });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

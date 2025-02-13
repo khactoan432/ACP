@@ -27,6 +27,8 @@ router.post("/interaction", userController.createInteraction);
 router.put("/interaction/:id", userController.updateInteraction);
 router.delete("/interaction/:id", userController.deleteInteraction);
 
+router.get("/your-materials", userController.getBuyedMaterial);
+
 router.get("/progresses", userController.getProgress);
 router.post("/progress", userController.createProgress);
 router.put("/progress/:id", userController.updateProgress);

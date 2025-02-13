@@ -3,15 +3,15 @@ const mongoose = require("mongoose");
 // Định nghĩa schema
 const ProgressSchema = new mongoose.Schema({
   id_user: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
   id_course: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
   id_lesson: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
   status: {
