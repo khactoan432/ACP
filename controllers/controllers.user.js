@@ -360,6 +360,16 @@ exports.getBuyedMaterial = async (req, res) => {
         },
       },
 
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          image: { $first: "$image" },
+          totalProgress: { $first: { $size: "$progresses" } }, // Đếm số progress
+          totalLessons: { $sum: { $size: "$lessons" } } // Đếm tổng số lessons
+        }
+      }
+
     ]);
 
     const orderExam = await Order.aggregate([
@@ -374,12 +384,217 @@ exports.getBuyedMaterial = async (req, res) => {
       },
       { $unwind: "$exam" }, // Chuyển mảng thành object
       { $replaceRoot: { newRoot: "$exam" } },
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          image: { $first: "$image" },
+          link: { $first: "$link" },
+          videos: { $first: "$examVideoIds" },
+        }
+      }
     ]);
     res.status(200).json({ orderCourse, orderExam });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getYourCourseDetail = async (req, res) => {
+  try {
+    const { id_user, id_course } = req.query;
+
+    const courseDetail = await Course.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id_course) } },
+
+      // Lookup lấy danh sách topics
+      {
+        $lookup: {
+          from: "topics",
+          localField: "_id",
+          foreignField: "id_course",
+          as: "topics"
+        }
+      },
+      { $unwind: { path: "$topics", preserveNullAndEmptyArrays: true } },
+      { $sort: { "topics.createdAt": 1 } }, // Sắp xếp topics theo createdAt
+
+      // Lookup lấy danh sách lessons trong mỗi topic
+      {
+        $lookup: {
+          from: "lessons",
+          localField: "topics._id",
+          foreignField: "id_topic",
+          as: "topics.lessons"
+        }
+      },
+      { $unwind: { path: "$topics.lessons", preserveNullAndEmptyArrays: true } },
+      { $sort: { "topics.lessons.createdAt": 1 } }, // Sắp xếp lessons theo createdAt
+
+      // Lookup lấy danh sách exercises từ exerciseIds của mỗi lesson
+      {
+        $lookup: {
+          from: "exercises",
+          localField: "topics.lessons.exerciseIds",
+          foreignField: "_id",
+          as: "topics.lessons.exercises"
+        }
+      },
+
+      // Lookup lấy progresses của user cho từng lesson
+      {
+        $lookup: {
+          from: "progresses",
+          let: { lessonId: "$topics.lessons._id", userId: new mongoose.Types.ObjectId(id_user) },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$id_lesson", "$$lessonId"] },
+                    { $eq: ["$id_user", "$$userId"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "topics.lessons.progress"
+        }
+      },
+
+      // Chỉ thêm isCompleted nếu lesson tồn tại
+      {
+        $addFields: {
+          "topics.lessons": {
+            $cond: {
+              if: { $ifNull: ["$topics.lessons._id", false] },
+              then: {
+                _id: "$topics.lessons._id",
+                id_topic: "$topics.lessons.id_topic",
+                name: "$topics.lessons.name",
+                video: "$topics.lessons.video",
+                status: "$topics.lessons.status",
+                createdAt: "$topics.lessons.createdAt",
+                exercises: { $ifNull: ["$topics.lessons.exercises", []] },
+                progress: "$topics.lessons.progress",
+                isCompleted: { $gt: [{ $size: { $ifNull: ["$topics.lessons.progress", []] } }, 0] }
+              },
+              else: "$$REMOVE"
+            }
+          }
+        }
+      },
+
+      // Gom nhóm lessons lại vào topics
+      {
+        $group: {
+          _id: {
+            courseId: "$_id",
+            courseName: "$name",
+            coursePrice: "$price",
+            courseDiscount: "$discount",
+            topicId: "$topics._id",
+            topicName: "$topics.name",
+            topicCreatedAt: "$topics.createdAt"
+          },
+          lessons: { $push: "$topics.lessons" }
+        }
+      },
+
+      // Đảm bảo `lessons` luôn là mảng
+      {
+        $addFields: {
+          lessons: {
+            $filter: {
+              input: "$lessons",
+              as: "lesson",
+              cond: { $ne: ["$$lesson", {}] }
+            }
+          }
+        }
+      },
+
+      // Gom nhóm topics vào course
+      {
+        $group: {
+          _id: "$_id.courseId",
+          name: { $first: "$_id.courseName" },
+          price: { $first: "$_id.coursePrice" },
+          discount: { $first: "$_id.courseDiscount" },
+          topics: {
+            $push: {
+              _id: "$_id.topicId",
+              name: "$_id.topicName",
+              createdAt: "$_id.topicCreatedAt",
+              lessons: { $ifNull: ["$lessons", []] }
+            }
+          }
+        }
+      },
+
+      // Sắp xếp topics theo createdAt
+      {
+        $addFields: {
+          topics: { $sortArray: { input: "$topics", sortBy: { createdAt: 1 } } }
+        }
+      },
+
+      // Xử lý tính toán tiến độ khóa học
+      {
+        $addFields: {
+          topics: {
+            $map: {
+              input: "$topics",
+              as: "topic",
+              in: {
+                _id: "$$topic._id",
+                name: "$$topic.name",
+                lessons: { $ifNull: ["$$topic.lessons", []] },
+                totalLessons: { $size: { $ifNull: ["$$topic.lessons", []] } },
+                completedLessons: {
+                  $size: {
+                    $filter: {
+                      input: { $ifNull: ["$$topic.lessons", []] },
+                      as: "lesson",
+                      cond: { $eq: ["$$lesson.isCompleted", true] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      // Tính tổng số lessons & lessons đã hoàn thành trên toàn bộ khóa học
+      {
+        $addFields: {
+          totalLessons: { $sum: "$topics.totalLessons" },
+          totalCompletedLessons: { $sum: "$topics.completedLessons" }
+        }
+      },
+
+      // Tính phần trăm hoàn thành của khóa học
+      {
+        $addFields: {
+          courseProgress: {
+            $cond: {
+              if: { $eq: ["$totalLessons", 0] },
+              then: 0,
+              else: { $multiply: [{ $divide: ["$totalCompletedLessons", "$totalLessons"] }, 100] }
+            }
+          }
+        }
+      }
+    ]);
+
+    res.status(200).json(courseDetail[0]);
+  } catch (error) {
+    console.error("Error fetching course detail:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 exports.getProgress = async (req, res) => {
   try {
@@ -398,7 +613,7 @@ exports.getProgress = async (req, res) => {
 exports.createProgress = async (req, res) => {
   try {
     const { id_user, id_course, id_lesson } = req.body;
-    const newProgress = new Progress({ id_user, id_course, id_lesson, status: false });
+    const newProgress = new Progress({ id_user, id_course, id_lesson, status: true });
     await newProgress.save();
     res.status(201).json({data: newProgress});
   } catch (err) {

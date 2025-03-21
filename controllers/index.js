@@ -372,7 +372,7 @@ exports.getExams = async (req, res) => {
 
     // Fetch exam với phân trang và bộ lọc
     const exams = await Exam.find(query)
-      .sort({ createdAt: 1 }) // Sắp xếp theo ngày tạo
+      .sort({ createdAt: -1 }) // Sắp xếp theo ngày tạo
       .skip((page - 1) * limit)
       .limit(limit);
 
